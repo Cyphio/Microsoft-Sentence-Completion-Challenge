@@ -1,14 +1,17 @@
 import pandas as pd, csv
 import os
 from nltk import word_tokenize as tokenize
+import numpy as np
 
 class SentenceCompletionChallenge:
-    def __init__(self, parentdir):
+    def __init__(self):
+        np.random.seed(101)
+
         # PARAMETERS
         self.left_context_window = 2
 
-        self.question_path = os.path.join(parentdir, "testing_data.csv")
-        self.answer_path = os.path.join(parentdir, "test_answer.csv")
+        self.question_path = "testing_data.csv"
+        self.answer_path = "test_answer.csv"
 
         self.read_files()
 
@@ -41,16 +44,15 @@ class SentenceCompletionChallenge:
     def get_field(self, field):
         return [q.get_field(field) for q in self.questions]
 
-    def predict(self, method="chooseA"):
+    def predict(self, method="random"):
         return [q.predict(method=method) for q in self.questions]
 
-    def predict_and_score(self, method="chooseA"):
+    def predict_and_score(self, method="random"):
         scores = [q.predict_and_score(method=method) for q in self.questions]
         return sum(scores) / len(scores)
 
 
 class question:
-
     def __init__(self, aline):
         self.fields = aline
 
@@ -60,15 +62,20 @@ class question:
     def add_answer(self, fields):
         self.answer = fields[1]
 
-    def chooseA(self):
-        return ("a")
-
-    def predict(self, method="chooseA"):
-        # eventually there will be lots of methods to choose from
-        if method == "chooseA":
-            return self.chooseA()
-
     def predict_and_score(self, method="chooseA"):
-        # compare prediction according to method with the correct answer
-        # return 1 or 0 accordingly
         return int(self.predict(method=method) == self.answer)
+
+    def predict(self, method="random"):
+        if method == "random":
+            return self.choose_randomly()
+
+    def choose_randomly(self):
+        return np.random.choice(["a", "b", "c", "d", "e"])
+
+
+
+if __name__ == '__main__':
+    scc = SentenceCompletionChallenge()
+
+    score = scc.predict_and_score()
+    print(score)
