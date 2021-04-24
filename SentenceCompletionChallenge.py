@@ -1,4 +1,5 @@
-import pandas as pd, csv
+from QuestionFramework import Questions
+from LanguageModel import LanguageModel
 import os
 from nltk import word_tokenize as tokenize
 import numpy as np
@@ -7,75 +8,69 @@ class SentenceCompletionChallenge:
     def __init__(self):
         np.random.seed(101)
 
-        # PARAMETERS
-        self.left_context_window = 2
+        num_training_files = 1
+        self.lm = LanguageModel(num_training_files)
 
-        self.question_path = "testing_data.csv"
-        self.answer_path = "test_answer.csv"
+        self.questions = Questions().get_questions()
 
-        self.read_files()
+        self.choices = ["a", "b", "c", "d", "e"]
 
-    def read_files(self):
-        with open(self.question_path) as instream:
-            csvreader = csv.reader(instream)
-            qlines = list(csvreader)
-
-        q_colnames = {item: i for i, item in enumerate(qlines[0])}
-        self.questions = [question(qline) for qline in qlines[1:]]
-
-        self.q_df = pd.DataFrame(qlines[1:], columns=qlines[0])
-        self.q_df['tokens'] = self.q_df['question'].map(tokenize)
-        self.q_df['left_context'] = self.q_df['tokens'].map(lambda x: self.get_left_context(x, self.left_context_window))
-
-        with open(self.answer_path) as instream:
-            csvreader = csv.reader(instream)
-            alines = list(csvreader)
-
-        for q, aline in zip(self.questions, alines[1:]):
-            q.add_answer(aline)
-
-    def get_left_context(self, sent_tokens, window, target='_____'):
-        if target in sent_tokens:
-            target_pos = sent_tokens.index(target)
-            if target_pos - window >= 0:
-                return sent_tokens[target_pos - window: target_pos]
-        return []
 
     def get_field(self, field):
         return [q.get_field(field) for q in self.questions]
 
     def predict(self, method="random"):
-        return [q.predict(method=method) for q in self.questions]
+        # return [q.predict(method=method) for q in self.questions]
+        if method == "random":
+            return [self.choose_randomly in range(len(self.questions))]
+        if method == "unigram":
+            return [self.unigram(q=q) for q in self.questions]
+        if method == "bigram":
+            return [self.bigram(q) for q in self.questions]
 
     def predict_and_score(self, method="random"):
-        scores = [q.predict_and_score(method=method) for q in self.questions]
+        scores = [int(p == a) for p, a in zip(self.predict(method=method), [q.answer for q in self.questions])]
         return sum(scores) / len(scores)
 
-
-class question:
-    def __init__(self, aline):
-        self.fields = aline
-
-    def get_field(self, field):
-        return self.fields[question.colnames[field]]
-
-    def add_answer(self, fields):
-        self.answer = fields[1]
-
-    def predict_and_score(self, method="chooseA"):
-        return int(self.predict(method=method) == self.answer)
-
-    def predict(self, method="random"):
-        if method == "random":
-            return self.choose_randomly()
-
     def choose_randomly(self):
-        return np.random.choice(["a", "b", "c", "d", "e"])
+        return np.random.choice(self.choices)
+
+
+
+
+    def unigram(self, q):
+        probabilities = [self.lm.unigram.get(q.get_field(ch + ")"), 0) for ch in self.choices]
+        best_choices = [ch for ch, prob in zip(self.choices, probabilities) if prob == max(probabilities)]
+        # if len(best_choices)>1:
+        #    print("Randomly choosing from {}".format(len(best_choices)))
+        return np.random.choice(best_choices)
+
+
+
+    def bigram(self, q, method="bigram"):
+        context = self.get_left_context(q, window=1)
+        probabilities = [self.lm.get_prob(q.get_field(f"{ch})"), context, methodparams={"method": method})
+                         for ch in self.choices]
+        best_choices = [ch for ch, prob in zip(self.choices, probabilities) if prob == max(probabilities)]
+        # if len(best_choices)>1:
+        #    print("Randomly choosing from {}".format(len(best_choices)))
+        return np.random.choice(best_choices)
+
+    def get_left_context(self, q, window, target='_____', sent_tokens=None):
+        if sent_tokens is None:
+            tokens = ["__START"] + tokenize(q.fields[q.col_names["question"]]) + ["__END"]
+        else:
+            tokens = sent_tokens
+        if target in tokens:
+            target_pos = tokens.index(target)
+            if target_pos - window >= 0:
+                return tokens[target_pos - window: target_pos]
+        return []
 
 
 
 if __name__ == '__main__':
     scc = SentenceCompletionChallenge()
 
-    score = scc.predict_and_score()
+    score = scc.predict_and_score("unigram")
     print(score)
