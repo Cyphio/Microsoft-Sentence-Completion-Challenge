@@ -4,11 +4,12 @@ import os
 from nltk import word_tokenize as tokenize
 import numpy as np
 
+
 class SentenceCompletionChallenge:
-    def __init__(self, num_training_files):
+    def __init__(self, num_training_files, save_lm=False):
         np.random.seed(101)
 
-        self.lm = LanguageModel(num_training_files)
+        self.lm = LanguageModel(num_training_files, save_data=save_lm)
 
         self.questions = Questions().get_questions()
 
@@ -20,11 +21,11 @@ class SentenceCompletionChallenge:
 
     def predict(self, method="random", smoothing=""):
         # return [q.predict(method=method) for q in self.questions]
-        if method == "unigram":
-            return [self.unigram(q=q) for q in self.questions]
-        if method == "bigram":
+        if method == "uni_gram":
+            return [self.uni_gram(q=q) for q in self.questions]
+        if method == "bi_gram":
             return [self.n_gram(q=q, method=method, window=1, smoothing=smoothing) for q in self.questions]
-        if method == "trigram":
+        if method == "tri_gram":
             return [self.n_gram(q=q, method=method, window=2, smoothing=smoothing) for q in self.questions]
         # Else predict randomly
         print("Randomly predicting")
@@ -42,8 +43,8 @@ class SentenceCompletionChallenge:
 
 
 
-    def unigram(self, q):
-        probabilities = [self.lm.unigram.get(q.get_field(ch + ")"), 0) for ch in self.choices]
+    def uni_gram(self, q):
+        probabilities = [self.lm.uni_gram.get(q.get_field(ch + ")"), 0) for ch in self.choices]
         best_choices = [ch for ch, prob in zip(self.choices, probabilities) if prob == max(probabilities)]
         # if len(best_choices)>1:
         #    print("Randomly choosing from {}".format(len(best_choices)))
@@ -76,6 +77,6 @@ class SentenceCompletionChallenge:
 
 if __name__ == '__main__':
     num_training_files = 10
-    scc = SentenceCompletionChallenge(num_training_files)
-    score = scc.predict_and_score(method="trigram", smoothing="kneser-ney")
+    scc = SentenceCompletionChallenge(num_training_files, save_lm=False)
+    score = scc.predict_and_score(method="tri_gram", smoothing="kneser-ney")
     print(score)

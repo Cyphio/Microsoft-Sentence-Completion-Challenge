@@ -3,10 +3,21 @@ from nltk import word_tokenize as tokenize
 from nltk import ngrams
 import operator
 import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from collections import deque
+import csv
+import pandas as pd
 
+
+def save_dict_as_CSV(data, path="", filename=""):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    df = pd.DataFrame.from_dict(data, orient='index')
+    df.to_csv(f"{path}/{filename}.csv", index=True)
 
 class LanguageModel:
-    def __init__(self, num_training_files, n):
+    def __init__(self, num_training_files, save_data=False):
         np.random.seed(101)
 
         train_data_set = "Holmes_data_set"
@@ -14,9 +25,19 @@ class LanguageModel:
 
         self.train_data_set = train_data_set
         self.files = self.training_files[:num_training_files]
-        self.unigram = {}
-        self.n_gram = {}
-        # self.train()
+
+        self.uni_gram = {}
+        self.bi_gram = {}
+        self.tri_gram = {}
+        self.train()
+
+        if save_data:
+            save_dict_as_CSV(data=self.uni_gram, path="LanguageModels",
+                             filename=f"{num_training_files}-uni_gram")
+            save_dict_as_CSV(data=self.bi_gram, path="LanguageModels",
+                             filename=f"{num_training_files}-bi_gram")
+            save_dict_as_CSV(data=self.tri_gram, path="LanguageModels",
+                             filename=f"{num_training_files}-tri_gram")
 
     def get_training_testing(self, train_data_set, split=0.5):
         filenames = os.listdir(train_data_set)
@@ -27,76 +48,108 @@ class LanguageModel:
         return filenames[:index], filenames[index:]
 
     def train(self):
-        self._processfiles()
-        print(self.n_gram.items())
+        self._process_files()
+
+        # smoothing:
         self._make_unknowns()
         self._discount()
+
         self._convert_to_probs()
 
-    def _processline(self, line):
-        # tokens = ["__START"] + tokenize(line) + ["__END"]
-        # previous = "__END"
-        # for token in tokens:
-        #     self.unigram[token] = self.unigram.get(token, 0) + 1
-        #     current = self.n_gram.get(previous, {})
-        #     current[token] = current.get(token, 0) + 1
-        #     self.n_gram[previous] = current
-        #     previous = token
+    def _process_line(self, line):
         tokens = ["__START"] + tokenize(line) + ["__END"]
-        self.n_gram = [' '.join(grams) for grams in ngrams(tokens, 2)]
+        previous = "__END"
 
+        for token in tokens:
+            # Creating uni_gram
+            self.uni_gram[token] = self.uni_gram.get(token, 0) + 1
 
-    def _processfiles(self):
-        for afile in self.files:
-            print("Processing {}".format(afile))
+            # Creating bi_gram
+            bi_current = self.bi_gram.get(previous, {})
+            bi_current[token] = bi_current.get(token, 0) + 1
+            self.bi_gram[previous] = bi_current
+            previous = token
+
+        # Creating tri_gram
+        shifted_tokens = deque(tokens)
+        shifted_tokens.rotate(1)
+        for prev_token, token in zip(shifted_tokens, tokens):
+            tri_current = self.tri_gram.get(previous, {})
+            tri_current[token] = tri_current.get(token, 0) + 1
+            self.tri_gram[previous] = tri_current
+            previous = f"{prev_token} {token}"
+
+    def _process_files(self):
+        for file in self.files:
+            print("Processing {}".format(file))
             try:
-                with open(os.path.join(self.train_data_set, afile)) as instream:
-                    for line in instream:
+                with open(os.path.join(self.train_data_set, file)) as in_stream:
+                    for line in in_stream:
                         line = line.rstrip()
                         if len(line) > 0:
-                            self._processline(line)
+                            self._process_line(line)
             except UnicodeDecodeError:
-                print("UnicodeDecodeError processing {}: ignoring file".format(afile))
+                print("UnicodeDecodeError processing {}: ignoring file".format(file))
 
     def _convert_to_probs(self):
-        self.unigram = {k: v / sum(self.unigram.values()) for (k, v) in self.unigram.items()}
-        self.n_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
-                       self.n_gram.items()}
+        self.uni_gram = {k: v / sum(self.uni_gram.values()) for (k, v) in self.uni_gram.items()}
+        self.bi_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
+                        self.bi_gram.items()}
+        self.tri_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
+                         self.tri_gram.items()}
 
-    def get_prob(self, token, context="", methodparams=None):
+    def get_prob(self, token, context=None, methodparams=None):
         if methodparams is None:
-            methodparams = {"method": "unigram", "smoothing": ""}
-        # if method == "unigram":
-        #     return self.unigram.get(token, 0)
-        # elif method == "bigram":
-        #     return self.bigram.get(context[-1], {}).get(token, 0)
-        if methodparams.get("method") == "unigram":
-            return self.unigram.get(token, self.unigram.get("__UNK", 0))
-        else:
-            if methodparams.get("smoothing") == "kneser-ney":
-                uniform_distribution = self.kn
+            methodparams = {"method": "uni_gram", "smoothing": ""}
+
+        if methodparams.get("method") == "bi_gram":
+            context = ' '.join(context)
+            bi_gram = self.bi_gram.get(context, self.bi_gram.get("__UNK", {}))
+            big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
+            if methodparams.get("smoothing") == "absolute":
+                uni_dist = self.uni_gram
+            elif methodparams.get("smoothing") == "kneser-ney":
+                uni_dist = self.bigram_kn
             else:
-                uniform_distribution = self.unigram
-            n_gram = self.n_gram.get(context[-1], self.n_gram.get("__UNK", {}))
-            big_p = n_gram.get(token, n_gram.get("__UNK", 0))
-            lmbda = n_gram["__DISCOUNT"]
-            uniform_probability = uniform_distribution.get(token, uniform_distribution.get("__UNK", 0))
-            # print(big_p,lmbda,uni_p)
-            return big_p + lmbda * uniform_probability
+                # No smoothing
+                return big_p
+            # Probability of token occurring after given context (big_p) + proportion of reserved probability mass
+            # (lambda) according to the uni_gram probability of the token (if absolute smoothing) or according to
+            # the likelihood of the token being seen in novel word combinations (if kneser-ney)
+            return big_p + bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0))
+
+
+        elif methodparams.get("method") == "tri_gram":
+            context = ' '.join(context)
+            tri_gram = self.tri_gram.get(context, self.tri_gram.get("__UNK", {}))
+            big_p = tri_gram.get(token, tri_gram.get("__UNK", 0))
+            if methodparams.get("smoothing") == "absolute":
+                uni_dist = self.uni_gram
+            elif methodparams.get("smoothing") == "kneser-ney":
+                uni_dist = self.trigram_kn
+            else:
+                # No smoothing
+                return big_p
+            return big_p + tri_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0))
+
+        else:
+            return self.uni_gram.get(token, self.uni_gram.get("__UNK", 0))
 
     def gen_highly_probable_words(self, k, n):
-        sorted_words = list(dict(sorted(self.unigram.items(), key=lambda item: item[1], reverse=True)).keys())[:k]
+        sorted_words = list(dict(sorted(self.uni_gram.items(), key=lambda item: item[1], reverse=True)).keys())[:k]
         return [np.random.choice(sorted_words) for i in range(n)]
 
     # use probabilities according to method to generate a likely next sequence
     # choose random token from k best
-    def next_likely(self, k=1, current="", method="unigram"):
+    def next_likely(self, k=1, current="", method="uni_gram"):
         blacklist = ["__START", "__UNK", "__DISCOUNT"]
 
-        if method == "unigram":
-            distribution = self.unigram
+        if method == "uni_gram":
+            distribution = self.uni_gram
+        elif method == "bi_gram":
+            distribution = self.bi_gram.get(current, self.bi_gram.get("__UNK", {}))
         else:
-            distribution = self.n_gram.get(current, self.n_gram.get("__UNK", {}))
+            distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
 
         most_likely = sorted(list(distribution.items()), key=operator.itemgetter(1), reverse=True)
 
@@ -114,82 +167,122 @@ class LanguageModel:
             tokens.append(current)
         return " ".join(tokens[:-1])
 
-    def compute_probability(self, filenames=None, method="unigram"):
+    def compute_prob_line(self, line, method, smoothing):
+        # this will add _start to the beginning of a line of text
+        # compute the probability of the line according to the desired model
+        # and returns probability together with number of tokens
+
+        tokens = ["__START"] + tokenize(line) + ["__END"]
+        acc = 0
+        for i, token in enumerate(tokens[1:]):
+            acc += math.log(self.get_prob(token, tokens[:i + 1], methodparams={"method": method, "smoothing": smoothing}))
+        return acc, len(tokens[1:])
+
+    def compute_probability(self, method, smoothing, filenames=None):
         if filenames is None:
             filenames = self.files
 
         total_p, total_N = 0, 0
-        for i, afile in enumerate(filenames):
-            print("Processing file {}:{}".format(i, afile))
+        for i, file in enumerate(filenames):
+            print("Processing file {}: {}".format(i, file))
             try:
-                with open(os.path.join(self.training_dir, afile)) as instream:
-                    for line in instream:
+                with open(os.path.join(self.train_data_set, file)) as in_stream:
+                    for line in in_stream:
                         line = line.rstrip()
                         if len(line) > 0:
-                            p, N = self.compute_prob_line(line, method=method)
+                            p, N = self.compute_prob_line(line, method=method, smoothing=smoothing)
                             total_p += p
                             total_N += N
             except UnicodeDecodeError:
-                print("UnicodeDecodeError processing file {}: ignoring rest of file".format(afile))
+                print("UnicodeDecodeError processing file {}: ignoring rest of file".format(file))
         return total_p, total_N
 
     # compute the probability and length of the corpus
     # calculate perplexity
     # lower perplexity means that the model better explains the data
-    def compute_perplexity(self, filenames=None, method="unigram"):
-        if filenames is None:
-            filenames = []
-        p, N = self.compute_probability(filenames=filenames, method=method)
+    def compute_perplexity(self, method, smoothing, filenames=None):
+        p, N = self.compute_probability(filenames=filenames, method=method, smoothing=smoothing)
         # print(p,N)
         pp = math.exp(-p / N)
         return pp
 
     def _make_unknowns(self, known=2):
         unknown = 0
-        for (k, v) in list(self.unigram.items()):
+        for (k, v) in list(self.uni_gram.items()):
             if v < known:
-                del self.unigram[k]
-                self.unigram["__UNK"] = self.unigram.get("__UNK", 0) + v
-        for (k, adict) in list(self.n_gram.items()):
+                del self.uni_gram[k]
+                self.uni_gram["__UNK"] = self.uni_gram.get("__UNK", 0) + v
+
+        for (k, adict) in list(self.bi_gram.items()):
             for (kk, v) in list(adict.items()):
-                isknown = self.unigram.get(kk, 0)
+                isknown = self.uni_gram.get(kk, 0)
                 if isknown == 0:
                     adict["__UNK"] = adict.get("__UNK", 0) + v
                     del adict[kk]
-            isknown = self.unigram.get(k, 0)
+            isknown = self.uni_gram.get(k, 0)
             if isknown == 0:
-                del self.n_gram[k]
-                current = self.n_gram.get("__UNK", {})
+                del self.bi_gram[k]
+                current = self.bi_gram.get("__UNK", {})
                 current.update(adict)
-                self.n_gram["__UNK"] = current
-
+                self.bi_gram["__UNK"] = current
             else:
-                self.n_gram[k] = adict
+                self.bi_gram[k] = adict
+
+        for (k, adict) in list(self.tri_gram.items()):
+            for (kk, v) in list(adict.items()):
+                isknown = self.uni_gram.get(kk, 0)
+                if isknown == 0:
+                    adict["__UNK"] = adict.get("__UNK", 0) + v
+                    del adict[kk]
+            isknown = self.uni_gram.get(k, 0)
+            if isknown == 0:
+                del self.tri_gram[k]
+                current = self.tri_gram.get("__UNK", {})
+                current.update(adict)
+                self.tri_gram["__UNK"] = current
+            else:
+                self.tri_gram[k] = adict
 
     def _discount(self, discount=0.75):
         # discount each bigram count by a small fixed amount
-        self.n_gram = {k: {kk: value - discount for (kk, value) in adict.items()} for (k, adict) in self.n_gram.items()}
+        self.bi_gram = {k: {kk: value - discount for (kk, value) in adict.items()} for (k, adict) in
+                        self.bi_gram.items()}
+        self.tri_gram = {k: {kk: value - discount for (kk, value) in adict.items()} for (k, adict) in
+                         self.tri_gram.items()}
 
         # for each word, store the total amount of the discount so that the total is the same
         # i.e., so we are reserving this as probability mass
-        for k in self.n_gram.keys():
-            lamb = len(self.n_gram[k])
-            self.n_gram[k]["__DISCOUNT"] = lamb * discount
+        for k in self.bi_gram.keys():
+            lamb = len(self.bi_gram[k])
+            self.bi_gram[k]["__DISCOUNT"] = lamb * discount
+        for k in self.tri_gram.keys():
+            lamb = len(self.tri_gram[k])
+            self.tri_gram[k]["__DISCOUNT"] = lamb * discount
 
         # work out kneser-ney unigram probabilities
         # count the number of contexts each word has been seen in
-        self.kn = {}
-        for (k, adict) in self.n_gram.items():
+        self.bigram_kn = {}
+        for (k, adict) in self.bi_gram.items():
             for kk in adict.keys():
-                self.kn[kk] = self.kn.get(kk, 0) + 1
+                self.bigram_kn[kk] = self.bigram_kn.get(kk, 0) + 1
+        self.trigram_kn = {}
+        for (k, adict) in self.tri_gram.items():
+            for kk in adict.keys():
+                self.trigram_kn[kk] = self.trigram_kn.get(kk, 0) + 1
 
 
 if __name__ == "__main__":
-    num_training_files = 1
-    lm = LanguageModel(num_training_files, 1)
+    num_training_files = 10
+    lm = LanguageModel(num_training_files)
 
     # print(lm.generate(k=5, methodparams={"method": "trigram"}))
 
-    lm._processline("Hello there how are you")
-    print(lm.unigram)
-    print(lm.n_gram)
+    # lm._process_line("Then he hovered over the hill")
+    # print(lm.uni_gram)
+    # print(lm.bi_gram)
+    # dic = lm.tri_gram
+    # print(dic["the dog"])
+    # print(max(dic["the dog"], key=dic["the dog"].get))
+
+    # print(lm.get_prob("pleased", context=["are"], methodparams={"method": "trigram"}))
+    print(lm.compute_perplexity(method='tri_gram', smoothing="kneser-ney"))
