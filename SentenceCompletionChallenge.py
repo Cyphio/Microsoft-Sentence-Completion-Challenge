@@ -23,10 +23,8 @@ class SentenceCompletionChallenge:
         # return [q.predict(method=method) for q in self.questions]
         if method == "uni_gram":
             return [self.uni_gram(q=q) for q in self.questions]
-        if method == "bi_gram":
-            return [self.n_gram(q=q, method=method, window=1, smoothing=smoothing) for q in self.questions]
-        if method == "tri_gram":
-            return [self.n_gram(q=q, method=method, window=2, smoothing=smoothing) for q in self.questions]
+        if method == "bi_gram" or "tri_gram":
+            return [self.n_gram(q=q, method=method, smoothing=smoothing) for q in self.questions]
         # Else predict randomly
         print("Randomly predicting")
         return [self.choose_randomly in range(len(self.questions))]
@@ -52,8 +50,8 @@ class SentenceCompletionChallenge:
 
 
 
-    def n_gram(self, q, method, window, smoothing=""):
-        context = self.get_left_context(q, window)
+    def n_gram(self, q, method, smoothing=""):
+        context = self.get_left_context(q)
         probabilities = [self.lm.get_prob(q.get_field(f"{ch})"), context, methodparams={"method": method,
                                                                                         "smoothing": smoothing})
                          for ch in self.choices]
@@ -62,15 +60,14 @@ class SentenceCompletionChallenge:
         #    print("Randomly choosing from {}".format(len(best_choices)))
         return np.random.choice(best_choices)
 
-    def get_left_context(self, q, window, target='_____', sent_tokens=None):
+    def get_left_context(self, q, target='_____', sent_tokens=None):
         if sent_tokens is None:
-            tokens = ["__START"] + tokenize(q.fields[q.col_names["question"]]) + ["__END"]
+            tokens = ["__END", "__START"] + tokenize(q.fields[q.col_names["question"]]) + ["__END"]
         else:
             tokens = sent_tokens
         if target in tokens:
             target_pos = tokens.index(target)
-            if target_pos - window >= 0:
-                return tokens[target_pos - window: target_pos]
+            return tokens[:target_pos]
         return []
 
 

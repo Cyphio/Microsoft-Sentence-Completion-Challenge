@@ -77,7 +77,7 @@ class LanguageModel:
             tri_current = self.tri_gram.get(previous, {})
             tri_current[token] = tri_current.get(token, 0) + 1
             self.tri_gram[previous] = tri_current
-            previous = f"{prev_token} {token}"
+            previous = (prev_token, token)
 
     def _process_files(self):
         for file in self.files:
@@ -103,8 +103,7 @@ class LanguageModel:
             methodparams = {"method": "uni_gram", "smoothing": ""}
 
         if methodparams.get("method") == "bi_gram":
-            context = ' '.join(context)
-            bi_gram = self.bi_gram.get(context, self.bi_gram.get("__UNK", {}))
+            bi_gram = self.bi_gram.get(tuple(context[-1:]), self.bi_gram.get("__UNK", {}))
             big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
             if methodparams.get("smoothing") == "absolute":
                 uni_dist = self.uni_gram
@@ -120,8 +119,7 @@ class LanguageModel:
 
 
         elif methodparams.get("method") == "tri_gram":
-            context = ' '.join(context)
-            tri_gram = self.tri_gram.get(context, self.tri_gram.get("__UNK", {}))
+            tri_gram = self.tri_gram.get(tuple(context[-2:]), self.tri_gram.get("__UNK", {}))
             big_p = tri_gram.get(token, tri_gram.get("__UNK", 0))
             if methodparams.get("smoothing") == "absolute":
                 uni_dist = self.uni_gram
@@ -158,7 +156,7 @@ class LanguageModel:
 
     def generate(self, k=1, end="__END", limit=20, methodparams=None):
         if methodparams is None:
-            methodparams = {"method": "bigram"}
+            methodparams = {"method": "bi_gram"}
         # a very simplistic way of generating likely tokens according to the model
         current = "__START"
         tokens = []
@@ -172,10 +170,12 @@ class LanguageModel:
         # compute the probability of the line according to the desired model
         # and returns probability together with number of tokens
 
-        tokens = ["__START"] + tokenize(line) + ["__END"]
+        tokens = ["__END", "__START"] + tokenize(line) + ["__END"]
         acc = 0
+
         for i, token in enumerate(tokens[1:]):
-            acc += math.log(self.get_prob(token, tokens[:i + 1], methodparams={"method": method, "smoothing": smoothing}))
+            acc += math.log(
+                self.get_prob(token, tokens[:i + 1], methodparams={"method": method, "smoothing": smoothing}))
         return acc, len(tokens[1:])
 
     def compute_probability(self, method, smoothing, filenames=None):
@@ -213,6 +213,8 @@ class LanguageModel:
                 del self.uni_gram[k]
                 self.uni_gram["__UNK"] = self.uni_gram.get("__UNK", 0) + v
 
+
+
         for (k, adict) in list(self.bi_gram.items()):
             for (kk, v) in list(adict.items()):
                 isknown = self.uni_gram.get(kk, 0)
@@ -228,20 +230,37 @@ class LanguageModel:
             else:
                 self.bi_gram[k] = adict
 
+
+
         for (k, adict) in list(self.tri_gram.items()):
             for (kk, v) in list(adict.items()):
                 isknown = self.uni_gram.get(kk, 0)
                 if isknown == 0:
                     adict["__UNK"] = adict.get("__UNK", 0) + v
                     del adict[kk]
-            isknown = self.uni_gram.get(k, 0)
-            if isknown == 0:
+            known = [self.uni_gram.get(token, 0) for token in k]
+            if 0 in known:
                 del self.tri_gram[k]
                 current = self.tri_gram.get("__UNK", {})
                 current.update(adict)
                 self.tri_gram["__UNK"] = current
             else:
                 self.tri_gram[k] = adict
+
+            # print(k)
+            # for idx, token in enumerate(k):
+            #     isknown = self.uni_gram.get(token, 0)
+            #     if isknown == 0:
+            #         del self.tri_gram[k]
+            #         current = self.tri_gram.get("__UNK", {})
+            #         current.update(adict)
+            #         self.tri_gram["__UNK"] = current
+            #         x = list(k)
+            #         x[idx] = "__UNK"
+            #         k = tuple(x)
+            #     else:
+            #         self.tri_gram[k] = adict
+
 
     def _discount(self, discount=0.75):
         # discount each bigram count by a small fixed amount
@@ -265,24 +284,26 @@ class LanguageModel:
         for (k, adict) in self.bi_gram.items():
             for kk in adict.keys():
                 self.bigram_kn[kk] = self.bigram_kn.get(kk, 0) + 1
+        # print(self.bigram_kn)
+
         self.trigram_kn = {}
         for (k, adict) in self.tri_gram.items():
             for kk in adict.keys():
                 self.trigram_kn[kk] = self.trigram_kn.get(kk, 0) + 1
-
+        # print(self.trigram_kn)
 
 if __name__ == "__main__":
-    num_training_files = 10
+    num_training_files = 1
     lm = LanguageModel(num_training_files)
 
-    # print(lm.generate(k=5, methodparams={"method": "trigram"}))
+    # print(lm.generate(k=5, methodparams={"method": "tri_gram"}))
 
-    # lm._process_line("Then he hovered over the hill")
+    # lm._process_line("Then he hovered over the hills")
     # print(lm.uni_gram)
     # print(lm.bi_gram)
-    # dic = lm.tri_gram
+    # print(lm.tri_gram)
     # print(dic["the dog"])
     # print(max(dic["the dog"], key=dic["the dog"].get))
 
     # print(lm.get_prob("pleased", context=["are"], methodparams={"method": "trigram"}))
-    print(lm.compute_perplexity(method='tri_gram', smoothing="kneser-ney"))
+    print(lm.compute_perplexity(method='uni_gram', smoothing=""))
