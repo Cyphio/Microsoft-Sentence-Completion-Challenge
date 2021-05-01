@@ -75,5 +75,5 @@ class SentenceCompletionChallenge:
 if __name__ == '__main__':
     num_training_files = 10
     scc = SentenceCompletionChallenge(num_training_files, save_lm=False)
-    score = scc.predict_and_score(method="tri_gram", smoothing="kneser-ney")
+    score = scc.predict_and_score(method="tri_gram", smoothing="")
     print(score)
