@@ -8,16 +8,8 @@ from collections import deque
 import csv
 import pandas as pd
 
-
-def save_dict_as_CSV(data, path="", filename=""):
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
-    df = pd.DataFrame.from_dict(data, orient='index')
-    df.to_csv(f"{path}/{filename}.csv", index=True)
-
-class LanguageModel:
-    def __init__(self, num_training_files, save_data=False):
+class NGram_Language_Model:
+    def __init__(self, num_training_files):
         np.random.seed(101)
 
         train_data_set = "Holmes_data_set"
@@ -30,14 +22,6 @@ class LanguageModel:
         self.bi_gram = {}
         self.tri_gram = {}
         self.train()
-
-        if save_data:
-            save_dict_as_CSV(data=self.uni_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-uni_gram")
-            save_dict_as_CSV(data=self.bi_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-bi_gram")
-            save_dict_as_CSV(data=self.tri_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-tri_gram")
 
     def get_training_testing(self, train_data_set, split=0.5):
         filenames = os.listdir(train_data_set)
@@ -103,7 +87,7 @@ class LanguageModel:
             methodparams = {"method": "uni_gram", "smoothing": ""}
 
         if methodparams.get("method") == "bi_gram":
-            bi_gram = self.bi_gram.get(tuple(context[-1:]), self.bi_gram.get("__UNK", {}))
+            bi_gram = self.bi_gram.get(context[-1], self.bi_gram.get("__UNK", {}))
             big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
             if methodparams.get("smoothing") == "absolute":
                 uni_dist = self.uni_gram
@@ -115,7 +99,7 @@ class LanguageModel:
             # Probability of token occurring after given context (big_p) + proportion of reserved probability mass
             # (lambda) according to the uni_gram probability of the token (if absolute smoothing) or according to
             # the likelihood of the token being seen in novel word combinations (if kneser-ney)
-            return big_p + bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0))
+            return big_p + (bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
 
 
         elif methodparams.get("method") == "tri_gram":
@@ -128,7 +112,7 @@ class LanguageModel:
             else:
                 # No smoothing
                 return big_p
-            return big_p + tri_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0))
+            return big_p + (tri_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
 
         else:
             return self.uni_gram.get(token, self.uni_gram.get("__UNK", 0))
@@ -139,15 +123,15 @@ class LanguageModel:
 
     # use probabilities according to method to generate a likely next sequence
     # choose random token from k best
-    def next_likely(self, k=1, current="", method="uni_gram"):
+    def next_likely(self, k=1, current="", method=""):
         blacklist = ["__START", "__UNK", "__DISCOUNT"]
 
-        if method == "uni_gram":
-            distribution = self.uni_gram
+        if method == "tri_gram":
+            distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
         elif method == "bi_gram":
             distribution = self.bi_gram.get(current, self.bi_gram.get("__UNK", {}))
         else:
-            distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
+            distribution = self.uni_gram
 
         most_likely = sorted(list(distribution.items()), key=operator.itemgetter(1), reverse=True)
 
@@ -238,6 +222,7 @@ class LanguageModel:
                 if isknown == 0:
                     adict["__UNK"] = adict.get("__UNK", 0) + v
                     del adict[kk]
+
             known = [self.uni_gram.get(token, 0) for token in k]
             if 0 in known:
                 del self.tri_gram[k]
@@ -246,6 +231,18 @@ class LanguageModel:
                 self.tri_gram["__UNK"] = current
             else:
                 self.tri_gram[k] = adict
+
+            # known = [self.uni_gram.get(token, 0) for token in k]
+            # for idx, token in enumerate(k):
+            #     if known[idx] == 0:
+            #         lst = list(k)
+            #         lst[idx] = "__UNK"
+            #         k = tuple(lst)
+            #         current = self.tri_gram.get("__UNK", {})
+            #         current.update(adict)
+            #         self.tri_gram["__UNK"] = current
+            #     else:
+            #         self.tri_gram[k] = adict
 
             # print(k)
             # for idx, token in enumerate(k):
@@ -274,36 +271,66 @@ class LanguageModel:
         for k in self.bi_gram.keys():
             lamb = len(self.bi_gram[k])
             self.bi_gram[k]["__DISCOUNT"] = lamb * discount
+            # print(self.bi_gram[k])
         for k in self.tri_gram.keys():
             lamb = len(self.tri_gram[k])
             self.tri_gram[k]["__DISCOUNT"] = lamb * discount
+            # print(self.tri_gram[k])
 
         # work out kneser-ney unigram probabilities
         # count the number of contexts each word has been seen in
         self.bigram_kn = {}
-        for (k, adict) in self.bi_gram.items():
-            for kk in adict.keys():
-                self.bigram_kn[kk] = self.bigram_kn.get(kk, 0) + 1
+        for (bigram_k, bigram_dict) in self.bi_gram.items():
+            for bigram_kk in bigram_dict.keys():
+                self.bigram_kn[bigram_kk] = self.bigram_kn.get(bigram_kk, 0) + 1
         # print(self.bigram_kn)
 
+        # self.trigram_kn = {}
+        # for (trigram_k, tigram_dict) in self.tri_gram.items():
+        #     for trigram_kk, bigram_dict in zip(tigram_dict.keys(), self.bi_gram.values()):
+        #         # for bigram_dict in self.bi_gram.values():
+        #             if trigram_kk in bigram_dict.keys():
+        #                 self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
+        # print(self.bi_gram)
+        # print(self.trigram_kn)
+
         self.trigram_kn = {}
-        for (k, adict) in self.tri_gram.items():
-            for kk in adict.keys():
-                self.trigram_kn[kk] = self.trigram_kn.get(kk, 0) + 1
+        for (trigram_k, trigram_dict) in self.tri_gram.items():
+            for trigram_kk in trigram_dict.keys():
+                self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
         # print(self.trigram_kn)
 
 if __name__ == "__main__":
     num_training_files = 1
-    lm = LanguageModel(num_training_files)
+    lm = NGram_Language_Model(num_training_files)
 
     # print(lm.generate(k=5, methodparams={"method": "tri_gram"}))
 
     # lm._process_line("Then he hovered over the hills")
+    lm._process_line("hello hello hello hello hi how are you")
+    lm._process_line("hello mi nem jeff how are you")
+
+    print(f"UNIGRAM: {lm.uni_gram}\n")
+
+    print(f"ORIGINAL: {lm.tri_gram}\n")
+    lm._make_unknowns()
+    print(f"UNI WITH UNKS: {lm.uni_gram}\n")
+    print(f"TRI WITH UNKS: {lm.tri_gram}\n")
+
+    lm._discount()
+    print(f"WITH DISCOUNT: {lm.tri_gram}\n")
+    lm._convert_to_probs()
+    print(f"CONVERT TO PROBS: {lm.tri_gram}\n")
+
     # print(lm.uni_gram)
     # print(lm.bi_gram)
-    # print(lm.tri_gram)
-    # print(dic["the dog"])
-    # print(max(dic["the dog"], key=dic["the dog"].get))
 
     # print(lm.get_prob("pleased", context=["are"], methodparams={"method": "trigram"}))
-    print(lm.compute_perplexity(method='uni_gram', smoothing=""))
+    # print(lm.compute_perplexity(method='uni_gram', smoothing=""))
+
+    # print(lm.tri_gram.get(tuple(context[-2:]), lm.tri_gram.get("__UNK", {})))
+
+    context = tokenize("Then he hovered over")
+
+    print(lm.get_prob(token="the", context=context,
+                      methodparams={"method": "bi_gram", "smoothing": "absolute"}))

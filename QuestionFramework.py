@@ -1,4 +1,4 @@
-from LanguageModel import LanguageModel
+from NGram_Language_Model import NGram_Language_Model
 import os
 import numpy as np
 import pandas as pd, csv

@@ -1,0 +1,24 @@
+{
+    "os": "Windows-10-10.0.18362-SP0",
+    "python": "3.8.8",
+    "heartbeatAt": "2021-05-02T00:27:55.541971",
+    "startedAt": "2021-05-02T00:27:46.273844",
+    "docker": null,
+    "gpu": "GeForce GTX 1070 Ti",
+    "gpu_count": 1,
+    "cpu_count": 16,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:\\Users\\harry\\PycharmProjects\\ANLE_Assignment\\ANN_Language_Model.py",
+    "codePath": "ANN_Language_Model.py",
+    "git": {
+        "remote": "https://github.com/Cyphio/ANLE_Assignment.git",
+        "commit": "4aeb357316fcda31d16f4beceaf78e3f7c225816"
+    },
+    "email": "Harry@mbr-online.co.uk",
+    "root": "C:/Users/harry/PycharmProjects/ANLE_Assignment",
+    "host": "Harry-Desktop",
+    "username": "harry",
+    "executable": "C:\\Users\\harry\\Anaconda3\\envs\\ML38\\python.exe"
+}
