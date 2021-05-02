@@ -1,0 +1,54 @@
+2021-05-02 01:31:24,039 INFO    MainThread:8296 [internal.py:wandb_internal():88] W&B internal server running at pid: 8296, started at: 2021-05-02 01:31:24.029079
+2021-05-02 01:31:24,041 INFO    WriterThread:8296 [datastore.py:open_for_write():77] open: C:\Users\harry\PycharmProjects\ANLE_Assignment\wandb\run-20210502_013122-1lbn6vmw\run-1lbn6vmw.wandb
+2021-05-02 01:31:24,041 DEBUG   HandlerThread:8296 [handler.py:handle_request():120] handle_request: check_version
+2021-05-02 01:31:24,048 DEBUG   SenderThread:8296 [sender.py:send():160] send: header
+2021-05-02 01:31:24,048 DEBUG   SenderThread:8296 [sender.py:send():160] send: request
+2021-05-02 01:31:24,049 DEBUG   SenderThread:8296 [sender.py:send_request():169] send_request: check_version
+2021-05-02 01:31:24,172 DEBUG   SenderThread:8296 [sender.py:send():160] send: run
+2021-05-02 01:31:24,424 ERROR   SenderThread:8296 [internal_api.py:execute():126] 400 response executing GraphQL.
+2021-05-02 01:31:24,424 ERROR   SenderThread:8296 [internal_api.py:execute():127] {"errors":[{"message":"invalid project name ANL-CW:N_GRAM_ANN, cannot contain character \":\"","path":["upsertBucket"]}],"data":{"upsertBucket":null}}
+2021-05-02 01:31:25,173 INFO    WriterThread:8296 [datastore.py:close():258] close: C:\Users\harry\PycharmProjects\ANLE_Assignment\wandb\run-20210502_013122-1lbn6vmw\run-1lbn6vmw.wandb
+2021-05-02 01:31:25,173 INFO    HandlerThread:8296 [handler.py:finish():624] shutting down handler
+2021-05-02 01:31:25,173 ERROR   MainThread:8296 [internal.py:wandb_internal():158] Thread SenderThread:
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\apis\normalize.py", line 24, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_api.py", line 883, in upsert_run
+    response = self.gql(mutation, variable_values=variable_values, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\old\retry.py", line 96, in __call__
+    result = self._call_fn(*args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_api.py", line 129, in execute
+    six.reraise(*sys.exc_info())
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\six.py", line 703, in reraise
+    raise value
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_api.py", line 123, in execute
+    return self.client.execute(*args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\client.py", line 52, in execute
+    result = self._get_result(document, *args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\client.py", line 60, in _get_result
+    return self.transport.execute(document, *args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\transport\requests.py", line 39, in execute
+    request.raise_for_status()
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\models.py", line 943, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: https://api.wandb.ai/graphql
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_util.py", line 54, in run
+    self._run()
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_util.py", line 95, in _run
+    self._process(record)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal.py", line 279, in _process
+    self._sm.send(record)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\sender.py", line 162, in send
+    send_handler(record)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\sender.py", line 541, in send_run
+    self._init_run(run, config_value_dict)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\sender.py", line 563, in _init_run
+    server_run, inserted = self._api.upsert_run(
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\apis\normalize.py", line 26, in wrapper
+    raise CommError(err.response, err)
+wandb.errors.CommError: <Response [400]>
+2021-05-02 01:31:27,203 INFO    MainThread:8296 [internal.py:handle_exit():78] Internal process exited

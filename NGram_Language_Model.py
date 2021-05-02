@@ -8,16 +8,8 @@ from collections import deque
 import csv
 import pandas as pd
 
-
-def save_dict_as_CSV(data, path="", filename=""):
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
-    df = pd.DataFrame.from_dict(data, orient='index')
-    df.to_csv(f"{path}/{filename}.csv", index=True)
-
-class LanguageModel:
-    def __init__(self, num_training_files, save_data=False):
+class NGram_Language_Model:
+    def __init__(self, num_training_files):
         np.random.seed(101)
 
         train_data_set = "Holmes_data_set"
@@ -29,15 +21,7 @@ class LanguageModel:
         self.uni_gram = {}
         self.bi_gram = {}
         self.tri_gram = {}
-        # self.train()
-
-        if save_data:
-            save_dict_as_CSV(data=self.uni_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-uni_gram")
-            save_dict_as_CSV(data=self.bi_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-bi_gram")
-            save_dict_as_CSV(data=self.tri_gram, path="LanguageModels",
-                             filename=f"{num_training_files}-tri_gram")
+        self.train()
 
     def get_training_testing(self, train_data_set, split=0.5):
         filenames = os.listdir(train_data_set)
@@ -318,7 +302,7 @@ class LanguageModel:
 
 if __name__ == "__main__":
     num_training_files = 1
-    lm = LanguageModel(num_training_files)
+    lm = NGram_Language_Model(num_training_files)
 
     # print(lm.generate(k=5, methodparams={"method": "tri_gram"}))
 
