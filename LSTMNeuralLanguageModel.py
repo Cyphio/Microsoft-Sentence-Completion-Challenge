@@ -27,7 +27,7 @@ class LSTMNeuralLanguageModel:
         self.train_files = self.training_files[:methodparams.get("num_files")]
         # self.test_files = self.testing_files[:methodparams.get("num_files")]
 
-        self.EPOCHS = 50
+        self.EPOCHS = 10
         self.N_HIDDEN = 512
         self.N_LAYERS = 4
         self.BATCH_SIZE = 10
@@ -137,7 +137,7 @@ class LSTMNeuralLanguageModel:
                 # get the output from the model
                 y_train_pred, train_hidden = model(X_train, train_hidden)
 
-                train_loss = loss_func(y_train_pred, y_train.view(self.BATCH_SIZE*self.SEQ_LENGTH))
+                train_loss = loss_func(y_train_pred, y_train.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
                 loss_stats['train'].append(train_loss)
 
                 train_loss.backward()
@@ -146,7 +146,7 @@ class LSTMNeuralLanguageModel:
                 optimizer.step()
 
             model.eval()
-            val_hidden = model.init_hidden(batch_size)
+            val_hidden = model.init_hidden(self.BATCH_SIZE)
             for X_val, y_val in self.get_batches(self.val_data, self.BATCH_SIZE, self.SEQ_LENGTH):
                 # One-hot encode our data and make them Torch tensors
                 X_val = self.one_hot_encode(X_val, n_chars)
@@ -157,7 +157,7 @@ class LSTMNeuralLanguageModel:
                 val_hidden = tuple([each.data for each in val_hidden])
 
                 y_val_pred, val_hidden = model(X_val, val_hidden)
-                val_loss = criterion(y_val_pred, targets.view(self.BATCH_SIZE*self.SEQ_LENGTH))
+                val_loss = loss_func(y_val_pred, y_val.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
                 loss_stats['val'].append(val_loss)
             print(f"Epoch {(epoch+1)+0:02}: | Train Loss: {loss_stats['train'][-1]:.5f} | Val Loss: {loss_stats['val'][-1]:.5f}")
             if save_model:
