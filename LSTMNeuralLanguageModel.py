@@ -5,11 +5,16 @@ import torch.optim as optim
 import numpy as np
 import os
 from nltk import word_tokenize as tokenize
+import nltk
 from nltk import ngrams
 from collections import deque
 from sklearn.model_selection import train_test_split
 from collections import defaultdict
 import wandb
+import csv
+import pandas as pd
+from nltk.corpus import wordnet as wn, wordnet_ic as wn_ic, lin_thesaurus as lin
+import re
 
 class LSTMNeuralLanguageModel:
 
@@ -18,28 +23,29 @@ class LSTMNeuralLanguageModel:
         print(f"RUNNING ON: {self.device}")
 
         # Seeds
-        np.random.seed(101)
-        torch.manual_seed(101)
+        # np.random.seed(101)
+        # torch.manual_seed(101)
 
         self.train_data_set = "Holmes_data_set"
         self.training_files, self.testing_files = self.get_training_testing(self.train_data_set)
 
         self.train_files = self.training_files[:methodparams.get("num_files")]
-        # self.test_files = self.testing_files[:methodparams.get("num_files")]
 
-        self.EPOCHS = 10
-        self.N_HIDDEN = 512
-        self.N_LAYERS = 4
-        self.BATCH_SIZE = 10
-        self.SEQ_LENGTH = 59
+        self.EPOCHS = 50
+        self.N_HIDDEN = 300
+        self.N_LAYERS = 3
+        self.BATCH_SIZE = 64
+        self.SEQ_LENGTH = 160
         self.CLIP = 5
-        self.LEARNING_RATE = 0.001
+        self.LEARNING_RATE = 0.01
 
         # Pre-processing hyper-parameters
         self.VAL_SPLIT = 0.4
-        self.encoded = self.preprocess_data()
+        self.chars, self.encoded = self.preprocess_data()
         val_idx = int(len(self.encoded) * (1 - self.VAL_SPLIT))
         self.train_data, self.val_data = self.encoded[:val_idx], self.encoded[val_idx:]
+
+
 
 
     def get_training_testing(self, train_data_set, split=0.8):
@@ -51,11 +57,17 @@ class LSTMNeuralLanguageModel:
         return filenames[:index], filenames[index:]
 
     def preprocess_data(self):
-        chars = self.process_file(self.train_files)
-        # corpus, chars, int2char, char2int = self.process_test_corpus()
+        text = self.process_file(self.train_files)
+        text = self.clean_text(text)
+        chars = tuple(set(text))
         int2char = dict(enumerate(chars))
         char2int = {ch: ii for ii, ch in int2char.items()}
-        return np.array([char2int[ch] for ch in chars])
+        return chars, np.array([char2int[ch] for ch in text])
+
+    def clean_text(self, text):
+        # tokenizer = nltk.RegexpTokenizer(r"\w+")
+        text = [word for word in nltk.word_tokenize(text) if word.isalnum()]
+        return ' '.join(text)
 
     def process_file(self, files):
         corpus = []
@@ -69,7 +81,7 @@ class LSTMNeuralLanguageModel:
                             corpus.append(line)
             except UnicodeDecodeError:
                 print("UnicodeDecodeError processing {}: ignoring file".format(file))
-        return tuple(set(corpus))
+        return ' '.join(corpus)
 
     def one_hot_encode(self, arr, n_labels):
         # Initialize the the encoded array
@@ -103,27 +115,29 @@ class LSTMNeuralLanguageModel:
             yield x, y
 
     def train_model(self, save_model=False):
-        model = LSTMModel(self.encoded, self.N_HIDDEN, self.N_LAYERS)
+        model = LSTMModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
         model.to(self.device)
+        print(f"MODEL ARCHITECTURE:\n{model}")
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=self.LEARNING_RATE)
 
+        save_path = f"NEURAL_MODELS/LSTM"
         if save_model:
             wandb.init(project="anle-cw")
             wandb.watch(model)
+            if not os.path.isdir(save_path):
+                os.makedirs(save_path)
 
         loss_stats = {'train': [], 'val': []}
 
         n_chars = len(model.chars)
         print("Beginning training")
         for epoch in range(self.EPOCHS):
-            model.train()
-            # initialize hidden state
-            train_hidden = model.init_hidden(self.BATCH_SIZE)
 
+            model.train()
+            train_hidden = model.init_hidden(self.BATCH_SIZE)
             for X_train, y_train in self.get_batches(self.train_data, self.BATCH_SIZE, self.SEQ_LENGTH):
-                # One-hot encode our data and make them Torch tensors
                 X_train = self.one_hot_encode(X_train, n_chars)
                 X_train, y_train = torch.from_numpy(X_train).to(self.device), torch.from_numpy(y_train).to(self.device)
 
@@ -131,45 +145,139 @@ class LSTMNeuralLanguageModel:
                 # we'd backprop through the entire training history
                 train_hidden = tuple([each.data for each in train_hidden])
 
-                # zero accumulated gradients
                 model.zero_grad()
 
-                # get the output from the model
                 y_train_pred, train_hidden = model(X_train, train_hidden)
 
                 train_loss = loss_func(y_train_pred, y_train.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
-                loss_stats['train'].append(train_loss)
+                loss_stats['train'].append(train_loss.item())
 
                 train_loss.backward()
-                # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                # clip_grad_norm helps prevent the exploding gradient problem in RNNs / LSTMs.
                 nn.utils.clip_grad_norm_(model.parameters(), self.CLIP)
                 optimizer.step()
+
+                if save_model and epoch % 10 == 0:
+                    torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'loss': train_loss}, f"{save_path}/{wandb.run.name}_epoch{epoch}.pth")
 
             model.eval()
             val_hidden = model.init_hidden(self.BATCH_SIZE)
             for X_val, y_val in self.get_batches(self.val_data, self.BATCH_SIZE, self.SEQ_LENGTH):
-                # One-hot encode our data and make them Torch tensors
                 X_val = self.one_hot_encode(X_val, n_chars)
                 X_val, y_val = torch.from_numpy(X_val).to(self.device), torch.from_numpy(y_val).to(self.device)
 
-                # Creating new variables for the hidden state, otherwise
-                # we'd backprop through the entire training history
                 val_hidden = tuple([each.data for each in val_hidden])
 
                 y_val_pred, val_hidden = model(X_val, val_hidden)
                 val_loss = loss_func(y_val_pred, y_val.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
-                loss_stats['val'].append(val_loss)
+                loss_stats['val'].append(val_loss.item())
             print(f"Epoch {(epoch+1)+0:02}: | Train Loss: {loss_stats['train'][-1]:.5f} | Val Loss: {loss_stats['val'][-1]:.5f}")
             if save_model:
                 wandb.log({'Train Loss': loss_stats['train'][-1], 'Val Loss': loss_stats['val'][-1]})
         print("Finished Training")
         if save_model:
-            save_path = f"NEURAL_MODELS/LSTM"
-            if not os.path.isdir(save_path):
-                os.makedirs(save_path)
-            torch.save(model.state_dict(), f"{save_path}/{wandb.run.name}.pth")
+            # torch.save(model, f"{save_path}/{wandb.run.name}.pth")
+            torch.save({
+                'epoch': self.EPOCHS,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': loss_stats['train'][-1]}, f"{save_path}/{wandb.run.name}_epoch{self.EPOCHS}.pth")
+            field_names = ["TOKENS", "N_HIDDEN", "N_LAYERS"]
+            model_data = [{"TOKENS": model.chars, "N_HIDDEN": self.N_HIDDEN, "N_LAYERS": self.N_LAYERS}]
+            with open(f"{save_path}/{wandb.run.name}_data.csv", 'w') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=field_names)
+                writer.writeheader()
+                writer.writerows(model_data)
         return model
 
+    def load_model(self, model_path, model_data_path):
+        model_data = pd.read_csv(model_data_path)
+        tokens = re.findall(r"'(.*?)'", model_data["TOKENS"][0])
+        model = LSTMModel(tokens, int(model_data["N_HIDDEN"][0]), int(model_data["N_LAYERS"][0]))
+        model.to(self.device)
+
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+
+        print("MODEL LOADED")
+        return model
+
+
+
+    # get_pred_chat takes a model and a character as argument
+    # returns the next character prediction and hidden state
+    def get_pred_char(self, model, character, hidden=None, top_k=None):
+        character = np.array([[model.char2int[character]]])
+        character = self.one_hot_encode(character, len(model.chars))
+        character = torch.from_numpy(character).to(self.device)
+
+        # detach hidden state from history
+        hidden = tuple([each.data for each in hidden])
+        out, hidden = model(character, hidden)
+
+        # softmax used to get probabilities of the likely next character given out
+        prob = F.softmax(out, dim=1).data.to(self.device)
+        if self.device == torch.device('cuda'):
+            prob = prob.cpu()  # move to cpu
+
+        if top_k is None:
+            top_ch = np.arange(len(model.chars))
+        else:
+            prob, top_ch = prob.topk(top_k)
+            top_ch = top_ch.numpy().squeeze()
+
+        prob = prob.numpy().squeeze()
+        char_ind = np.random.choice(top_ch, p=prob / prob.sum())
+
+        return model.int2char[char_ind], hidden
+
+    # get_pred_word takes the model, a prime sentence and top_k (defining the scope of characters considered probable)
+    # returns the predicted word followed by the full sentence
+    def get_pred_word(self, model, prime='', top_k=None):
+        model.eval()
+        chars = [ch for ch in prime]
+        hidden = model.init_hidden(1)
+        prime_char = ""
+        for ch in prime:
+            prime_char, hidden = self.get_pred_char(model, ch, hidden, top_k=top_k)
+        chars.append(prime_char)
+
+        cont = True
+        while cont:
+            pred_char, hidden = self.get_pred_char(model, chars[-1], hidden, top_k=top_k)
+            if len(tokenize(pred_char)) == 0:
+                cont = False
+                break
+            chars.append(tokenize(pred_char)[0])
+        # print(f"SENTENCE: {''.join(chars)}\nWORD: {tokenize(''.join(chars))[-1]}")
+        return tokenize(''.join(chars))[-1], ''.join(chars)
+
+    def get_prob(self, X, y, measure='path'):
+        X_synsets = wn.synsets(str(X))
+        # print(X_synsets)
+        if len(X_synsets) == 0:
+            return 0
+        y_synsets = wn.synsets(str(y))
+        if measure == 'lch':
+            similarities = [X_.lch_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
+        elif measure == 'wup':
+            print("CALLED")
+            similarities = [X_.wup_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
+        elif measure == 'res':
+            similarities =[X_.res_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+        elif measure == 'jcn':
+            similarities =[X_.jcn_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+        elif measure == 'lin':
+            similarities =[X_.lin_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+        else:
+            # Else, calculate path similarity
+            similarities = [X_.path_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
+        similarities = [i for i in similarities if i]
+        return max(similarities)
 
 class LSTMModel(nn.Module):
 
@@ -218,10 +326,17 @@ class LSTMModel(nn.Module):
 
 if __name__ == "__main__":
     methodparams = {"model": "NEURAL",
-                    "num_files": 1,
-                    "test_model": False}
+                    "num_files": 10}
 
     NLM = LSTMNeuralLanguageModel(methodparams)
-    NLM.train_model(save_model=False)
+
+
+    NLM.train_model(save_model=True)
+
+
+    # model = NLM.load_model(model_path="NEURAL_MODELS/LSTM/jolly-bush-44_epoch50.pth",
+    #                        model_data_path="NEURAL_MODELS/LSTM/jolly-bush-44_data.csv")
+    # pred_word, sentence = NLM.get_pred_word(model, prime='I have it from the same source that you are both an orphan and a bachelor and are ', top_k=5)
+    # print(NLM.get_prob("the", "discipline", measure='path'))
 
 

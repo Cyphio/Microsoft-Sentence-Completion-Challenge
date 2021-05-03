@@ -270,4 +270,4 @@ if __name__ == "__main__":
     NLM = RNNNeuralLanguageModel(methodparams)
     # NLM.train_model(save_model=True)
     # model = NLM.load_model("NEURAL_MODELS/lyric-durian-7.pth")
-    print(NLM.sample(NLM.train_model(save_model=False), 15, "good"))
+    print(NLM.sample(NLM.train_model(save_model=False), 15, "good "))

@@ -1,0 +1,19 @@
+Beginning training
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:760: UserWarning: Using non-full backward hooks on a Module that does not return a single Tensor or a tuple of Tensors is deprecated and will be removed in future versions. This hook will be missing some of the grad_output. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using non-full backward hooks on a Module that does not return a "
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:795: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
+Traceback (most recent call last):
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/LSTMNeuralLanguageModel.py", line 290, in <module>
+    NLM.train_model(save_model=True)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/LSTMNeuralLanguageModel.py", line 141, in train_model
+    y_train_pred, train_hidden = model(X_train, train_hidden)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/LSTMNeuralLanguageModel.py", line 263, in forward
+    r_output, hidden = self.lstm(x, hidden)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\rnn.py", line 661, in forward
+    result = _VF.lstm(input, hx, self._flat_weights, self.bias, self.num_layers,
+RuntimeError: CUDA out of memory. Tried to allocate 2.32 GiB (GPU 0; 8.00 GiB total capacity; 1.64 GiB already allocated; 2.31 GiB free; 3.72 GiB reserved in total by PyTorch)

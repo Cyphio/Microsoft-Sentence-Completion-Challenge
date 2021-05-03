@@ -1,0 +1,101 @@
+2021-05-03 15:18:19,323 INFO    MainThread:13632 [internal.py:wandb_internal():88] W&B internal server running at pid: 13632, started at: 2021-05-03 15:18:19.313819
+2021-05-03 15:18:19,323 INFO    WriterThread:13632 [datastore.py:open_for_write():77] open: C:\Users\harry\PycharmProjects\ANLE_Assignment\wandb\run-20210503_151818-1j62jkrf\run-1j62jkrf.wandb
+2021-05-03 15:18:19,323 DEBUG   HandlerThread:13632 [handler.py:handle_request():120] handle_request: check_version
+2021-05-03 15:18:19,323 DEBUG   SenderThread:13632 [sender.py:send():160] send: header
+2021-05-03 15:18:19,333 DEBUG   SenderThread:13632 [sender.py:send():160] send: request
+2021-05-03 15:18:19,333 DEBUG   SenderThread:13632 [sender.py:send_request():169] send_request: check_version
+2021-05-03 15:18:19,443 DEBUG   SenderThread:13632 [sender.py:send():160] send: run
+2021-05-03 15:18:20,153 INFO    SenderThread:13632 [sender.py:_start_run_threads():651] run started: 1j62jkrf with start time 1620051498
+2021-05-03 15:18:20,153 DEBUG   SenderThread:13632 [sender.py:send():160] send: summary
+2021-05-03 15:18:20,153 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:18:20,153 DEBUG   HandlerThread:13632 [handler.py:handle_request():120] handle_request: run_start
+2021-05-03 15:18:22,943 DEBUG   HandlerThread:13632 [meta.py:__init__():34] meta init
+2021-05-03 15:18:22,943 DEBUG   HandlerThread:13632 [meta.py:__init__():48] meta init done
+2021-05-03 15:18:22,943 DEBUG   HandlerThread:13632 [meta.py:probe():190] probe
+2021-05-03 15:18:22,963 DEBUG   HandlerThread:13632 [meta.py:_setup_git():180] setup git
+2021-05-03 15:18:23,043 DEBUG   HandlerThread:13632 [meta.py:_setup_git():187] setup git done
+2021-05-03 15:18:23,043 DEBUG   HandlerThread:13632 [meta.py:_save_pip():52] save pip
+2021-05-03 15:18:23,043 DEBUG   HandlerThread:13632 [meta.py:_save_pip():66] save pip done
+2021-05-03 15:18:23,043 DEBUG   HandlerThread:13632 [meta.py:probe():231] probe done
+2021-05-03 15:18:23,281 DEBUG   SenderThread:13632 [sender.py:send():160] send: files
+2021-05-03 15:18:23,281 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-metadata.json with policy now
+2021-05-03 15:18:23,281 DEBUG   HandlerThread:13632 [handler.py:handle_request():120] handle_request: status
+2021-05-03 15:18:23,283 DEBUG   SenderThread:13632 [sender.py:send():160] send: request
+2021-05-03 15:18:23,283 DEBUG   SenderThread:13632 [sender.py:send_request():169] send_request: status
+2021-05-03 15:18:23,753 DEBUG   SenderThread:13632 [sender.py:send():160] send: files
+2021-05-03 15:18:23,753 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file media\graph\graph_0_summary_b4f026b3.graph.json with policy now
+2021-05-03 15:18:23,763 DEBUG   SenderThread:13632 [sender.py:send():160] send: summary
+2021-05-03 15:18:23,763 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:18:23,763 DEBUG   SenderThread:13632 [sender.py:send():160] send: summary
+2021-05-03 15:18:23,763 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:18:23,906 DEBUG   SenderThread:13632 [sender.py:send():160] send: summary
+2021-05-03 15:18:23,906 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:18:38,460 DEBUG   SenderThread:13632 [sender.py:send():160] send: history
+2021-05-03 15:18:38,460 DEBUG   SenderThread:13632 [sender.py:send():160] send: summary
+2021-05-03 15:18:38,460 INFO    SenderThread:13632 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:18:38,510 DEBUG   HandlerThread:13632 [handler.py:handle_request():120] handle_request: status
+2021-05-03 15:18:38,510 DEBUG   SenderThread:13632 [sender.py:send():160] send: request
+2021-05-03 15:18:38,510 DEBUG   SenderThread:13632 [sender.py:send_request():169] send_request: status
+2021-05-03 15:18:38,563 DEBUG   HandlerThread:13632 [handler.py:handle_request():120] handle_request: poll_exit
+2021-05-03 15:18:57,643 WARNING Thread-9  :13632 [util.py:request_with_retry():758] requests_with_retry encountered retryable exception: ('Connection aborted.', TimeoutError(10060, 'A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond', None, 10060, None)). args: ('https://api.wandb.ai/files/cyphio/anle-cw/1j62jkrf/file_stream',), kwargs: {'json': {'files': {'output.log': {'offset': 3, 'content': ['2021-05-03T14:18:38.453562 Epoch 01: | Train Loss: 3.09171 | Val Loss: 3.08292\n\r\n']}}}}
+2021-05-03 15:19:11,703 ERROR   SenderThread:13632 [retry.py:__call__():111] Retry attempt failed:
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connection.py", line 169, in _new_conn
+    conn = connection.create_connection(
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\util\connection.py", line 96, in create_connection
+    raise err
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\util\connection.py", line 86, in create_connection
+    sock.connect(sa)
+socket.timeout: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connectionpool.py", line 699, in urlopen
+    httplib_response = self._make_request(
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connectionpool.py", line 382, in _make_request
+    self._validate_conn(conn)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connectionpool.py", line 1010, in _validate_conn
+    conn.connect()
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connection.py", line 353, in connect
+    conn = self._new_conn()
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connection.py", line 174, in _new_conn
+    raise ConnectTimeoutError(
+urllib3.exceptions.ConnectTimeoutError: (<urllib3.connection.HTTPSConnection object at 0x00000209FA084E50>, 'Connection to api.wandb.ai timed out. (connect timeout=10)')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\adapters.py", line 439, in send
+    resp = conn.urlopen(
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\connectionpool.py", line 755, in urlopen
+    retries = retries.increment(
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\urllib3\util\retry.py", line 573, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.wandb.ai', port=443): Max retries exceeded with url: /graphql (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x00000209FA084E50>, 'Connection to api.wandb.ai timed out. (connect timeout=10)'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\old\retry.py", line 96, in __call__
+    result = self._call_fn(*args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\sdk\internal\internal_api.py", line 123, in execute
+    return self.client.execute(*args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\client.py", line 52, in execute
+    result = self._get_result(document, *args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\client.py", line 60, in _get_result
+    return self.transport.execute(document, *args, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\wandb\vendor\gql-0.2.0\gql\transport\requests.py", line 38, in execute
+    request = requests.post(self.url, **post_args)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\api.py", line 119, in post
+    return request('post', url, data=data, json=json, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\api.py", line 61, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\sessions.py", line 542, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\sessions.py", line 655, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\requests\adapters.py", line 504, in send
+    raise ConnectTimeout(e, request=request)
+requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='api.wandb.ai', port=443): Max retries exceeded with url: /graphql (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x00000209FA084E50>, 'Connection to api.wandb.ai timed out. (connect timeout=10)'))
+2021-05-03 15:19:21,093 WARNING Thread-9  :13632 [util.py:request_with_retry():758] requests_with_retry encountered retryable exception: HTTPSConnectionPool(host='api.wandb.ai', port=443): Max retries exceeded with url: /files/cyphio/anle-cw/1j62jkrf/file_stream (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x00000209FA1A53D0>: Failed to establish a new connection: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond')). args: ('https://api.wandb.ai/files/cyphio/anle-cw/1j62jkrf/file_stream',), kwargs: {'json': {'files': {'output.log': {'offset': 3, 'content': ['2021-05-03T14:18:38.453562 Epoch 01: | Train Loss: 3.09171 | Val Loss: 3.08292\n\r\n']}}}}
