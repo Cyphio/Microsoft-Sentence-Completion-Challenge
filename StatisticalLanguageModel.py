@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from collections import deque
 import csv
 import pandas as pd
-
+from pyprobar import probar
 
 class StatisticalLanguageModel:
     def __init__(self, params):
@@ -38,6 +38,18 @@ class StatisticalLanguageModel:
         index = int(n * split)
         return filenames[:index], filenames[index:]
 
+    def _process_files(self):
+        print(f"PROCESSING {self.params.get('num_files')} FILES")
+        for file in probar(self.files):
+            try:
+                with open(os.path.join(self.train_data_set, file)) as in_stream:
+                    for line in in_stream:
+                        line = line.rstrip()
+                        if len(line) > 0:
+                            self._process_line(line)
+            except UnicodeDecodeError:
+                print("UnicodeDecodeError processing {}: ignoring file".format(file))
+
     def _process_line(self, line):
         tokens = ["__START"] + tokenize(line) + ["__END"]
         previous = "__END"
@@ -60,132 +72,6 @@ class StatisticalLanguageModel:
             tri_current[token] = tri_current.get(token, 0) + 1
             self.tri_gram[previous] = tri_current
             previous = (prev_token, token)
-
-    def _process_files(self):
-        for file in self.files:
-            print("Processing {}".format(file))
-            try:
-                with open(os.path.join(self.train_data_set, file)) as in_stream:
-                    for line in in_stream:
-                        line = line.rstrip()
-                        if len(line) > 0:
-                            self._process_line(line)
-            except UnicodeDecodeError:
-                print("UnicodeDecodeError processing {}: ignoring file".format(file))
-
-    def _convert_to_probs(self):
-        self.uni_gram = {k: v / sum(self.uni_gram.values()) for (k, v) in self.uni_gram.items()}
-        self.bi_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
-                        self.bi_gram.items()}
-        self.tri_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
-                         self.tri_gram.items()}
-
-    def get_prob(self, token, context=None):
-
-        # bi_gram
-        if self.params.get("n") == 2:
-            bi_gram = self.bi_gram.get(context[-1], self.bi_gram.get("__UNK", {}))
-            big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
-            if self.params.get("smoothing") == "absolute":
-                uni_dist = self.uni_gram
-            elif self.params.get("smoothing") == "kneser-ney":
-                uni_dist = self.bigram_kn
-            else:
-                # No smoothing
-                return big_p
-            # Probability of token occurring after given context (big_p) + proportion of reserved probability mass
-            # (lambda) according to the uni_gram probability of the token (if absolute smoothing) or according to
-            # the likelihood of the token being seen in novel word combinations (if kneser-ney)
-            return big_p + (bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
-
-        # tri_gram
-        elif self.params.get("n") == 3:
-            tri_gram = self.tri_gram.get(tuple(context[-2:]), self.tri_gram.get("__UNK", {}))
-            big_p = tri_gram.get(token, tri_gram.get("__UNK", 0))
-            if self.params.get("smoothing") == "absolute":
-                uni_dist = self.uni_gram
-            elif self.params.get("smoothing") == "kneser-ney":
-                uni_dist = self.trigram_kn
-            else:
-                # No smoothing
-                return big_p
-            return big_p + (tri_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
-
-        # uni_gram
-        else:
-            print("PREDICTING USING UNI_GRAM")
-            return self.uni_gram.get(token, self.uni_gram.get("__UNK", 0))
-
-    def gen_highly_probable_words(self, k, n):
-        sorted_words = list(dict(sorted(self.uni_gram.items(), key=lambda item: item[1], reverse=True)).keys())[:k]
-        return [np.random.choice(sorted_words) for i in range(n)]
-
-    # use probabilities according to method to generate a likely next sequence
-    # choose random token from k best
-    def next_likely(self, n, k=1, current=""):
-        blacklist = ["__START", "__UNK", "__DISCOUNT"]
-
-        if n == 3:
-            distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
-        elif n == 2:
-            distribution = self.bi_gram.get(current, self.bi_gram.get("__UNK", {}))
-        else:
-            distribution = self.uni_gram
-
-        most_likely = sorted(list(distribution.items()), key=operator.itemgetter(1), reverse=True)
-
-        filtered = [w for (w, p) in most_likely if w not in blacklist]
-        return np.random.choice(filtered[:k])
-
-    def generate(self, k=1, end="__END", limit=20):
-        # a very simplistic way of generating likely tokens according to the model
-        current = "__START"
-        tokens = []
-        while current != end and len(tokens) < limit:
-            current = self.next_likely(n=self.params.get("n"), k=k, current=current)
-            tokens.append(current)
-        return " ".join(tokens[:-1])
-
-    def compute_prob_line(self, line):
-        # this will add _start to the beginning of a line of text
-        # compute the probability of the line according to the desired model
-        # and returns probability together with number of tokens
-
-        tokens = ["__END", "__START"] + tokenize(line) + ["__END"]
-        acc = 0
-
-        for i, token in enumerate(tokens[1:]):
-            acc += math.log(
-                self.get_prob(token, tokens[:i + 1]))
-        return acc, len(tokens[1:])
-
-    def compute_probability(self):
-        if filenames is None:
-            filenames = self.files
-
-        total_p, total_N = 0, 0
-        for i, file in enumerate(self.files):
-            print("Processing file {}: {}".format(i, file))
-            try:
-                with open(os.path.join(self.train_data_set, file)) as in_stream:
-                    for line in in_stream:
-                        line = line.rstrip()
-                        if len(line) > 0:
-                            p, N = self.compute_prob_line(line=line)
-                            total_p += p
-                            total_N += N
-            except UnicodeDecodeError:
-                print("UnicodeDecodeError processing file {}: ignoring rest of file".format(file))
-        return total_p, total_N
-
-    # compute the probability and length of the corpus
-    # calculate perplexity
-    # lower perplexity means that the model better explains the data
-    def compute_perplexity(self):
-        p, N = self.compute_probability()
-        # print(p,N)
-        pp = math.exp(-p / N)
-        return pp
 
     def _make_unknowns(self, known=2):
         unknown = 0
@@ -291,6 +177,116 @@ class StatisticalLanguageModel:
             for trigram_kk in trigram_dict.keys():
                 self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
         # print(self.trigram_kn)
+
+    def _convert_to_probs(self):
+        self.uni_gram = {k: v / sum(self.uni_gram.values()) for (k, v) in self.uni_gram.items()}
+        self.bi_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
+                        self.bi_gram.items()}
+        self.tri_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
+                         self.tri_gram.items()}
+
+    def get_prob(self, token, context=None):
+        # bi_gram
+        if self.params.get("n") == 2:
+            bi_gram = self.bi_gram.get(context[-1], self.bi_gram.get("__UNK", {}))
+            big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
+            if self.params.get("smoothing") == "absolute":
+                uni_dist = self.uni_gram
+            elif self.params.get("smoothing") == "kneser-ney":
+                uni_dist = self.bigram_kn
+            else:
+                # No smoothing
+                return big_p
+            # Probability of token occurring after given context (big_p) + proportion of reserved probability mass
+            # (lambda) according to the uni_gram probability of the token (if absolute smoothing) or according to
+            # the likelihood of the token being seen in novel word combinations (if kneser-ney)
+            return big_p + (bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
+
+        # tri_gram
+        elif self.params.get("n") == 3:
+            tri_gram = self.tri_gram.get(tuple(context[-2:]), self.tri_gram.get("__UNK", {}))
+            big_p = tri_gram.get(token, tri_gram.get("__UNK", 0))
+            if self.params.get("smoothing") == "absolute":
+                uni_dist = self.uni_gram
+            elif self.params.get("smoothing") == "kneser-ney":
+                uni_dist = self.trigram_kn
+            else:
+                # No smoothing
+                return big_p
+            return big_p + (tri_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
+
+        # uni_gram
+        else:
+            print("PREDICTING USING UNI_GRAM")
+            return self.uni_gram.get(token, self.uni_gram.get("__UNK", 0))
+
+    def gen_highly_probable_words(self, k, n):
+        sorted_words = list(dict(sorted(self.uni_gram.items(), key=lambda item: item[1], reverse=True)).keys())[:k]
+        return [np.random.choice(sorted_words) for i in range(n)]
+
+    # use probabilities according to method to generate a likely next sequence
+    # choose random token from k best
+    def next_likely(self, n, k=1, current=""):
+        blacklist = ["__START", "__UNK", "__DISCOUNT"]
+
+        if n == 3:
+            distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
+        elif n == 2:
+            distribution = self.bi_gram.get(current, self.bi_gram.get("__UNK", {}))
+        else:
+            distribution = self.uni_gram
+
+        most_likely = sorted(list(distribution.items()), key=operator.itemgetter(1), reverse=True)
+
+        filtered = [w for (w, p) in most_likely if w not in blacklist]
+        return np.random.choice(filtered[:k])
+
+    def generate(self, k=1, end="__END", limit=20):
+        # a very simplistic way of generating likely tokens according to the model
+        current = "__START"
+        tokens = []
+        while current != end and len(tokens) < limit:
+            current = self.next_likely(n=self.params.get("n"), k=k, current=current)
+            tokens.append(current)
+        return " ".join(tokens[:-1])
+
+    def compute_prob_line(self, line):
+        # this will add _start to the beginning of a line of text
+        # compute the probability of the line according to the desired model
+        # and returns probability together with number of tokens
+
+        tokens = ["__END", "__START"] + tokenize(line) + ["__END"]
+        acc = 0
+
+        for i, token in enumerate(tokens[1:]):
+            acc += math.log(
+                self.get_prob(token, tokens[:i + 1]))
+        return acc, len(tokens[1:])
+
+    def compute_probability(self):
+        total_p, total_N = 0, 0
+        for i, file in enumerate(self.files):
+            print("Processing file {}: {}".format(i, file))
+            try:
+                with open(os.path.join(self.train_data_set, file)) as in_stream:
+                    for line in in_stream:
+                        line = line.rstrip()
+                        if len(line) > 0:
+                            p, N = self.compute_prob_line(line=line)
+                            total_p += p
+                            total_N += N
+            except UnicodeDecodeError:
+                print("UnicodeDecodeError processing file {}: ignoring rest of file".format(file))
+        return total_p, total_N
+
+    # compute the probability and length of the corpus
+    # calculate perplexity
+    # lower perplexity means that the model better explains the data
+    def compute_perplexity(self):
+        p, N = self.compute_probability()
+        # print(p,N)
+        pp = math.exp(-p / N)
+        return pp
 
 
 if __name__ == "__main__":

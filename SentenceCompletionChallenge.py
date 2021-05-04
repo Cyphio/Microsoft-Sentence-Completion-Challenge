@@ -1,6 +1,6 @@
 from QuestionFramework import Questions
 from StatisticalLanguageModel import StatisticalLanguageModel
-from LSTMNeuralLanguageModel import LSTMNeuralLanguageModel
+from NeuralLanguageModel import NeuralLanguageModel
 import os
 from nltk import word_tokenize as tokenize
 import numpy as np
@@ -28,7 +28,7 @@ class SentenceCompletionChallenge():
 
 
         elif params.get("model") == "NEURAL":
-            self.neural_lm = LSTMNeuralLanguageModel(params)
+            self.neural_lm = NeuralLanguageModel(params)
             model = self.neural_lm.load_model(model_path=params.get("model_path"),
                                               model_data_path=params.get("model_data_path"))
             print("GENERATING NEURAL LANGUAGE MODEL PREDICTIONS")
@@ -56,7 +56,7 @@ class SentenceCompletionChallenge():
     def neural_pred(self, q, model):
         context = ' '.join(self.get_left_context(q))
         # Removing punctuation from prime so that model doesnt run into unknown characters
-        context = self.neural_lm.clean_text(context)
+        context = self.neural_lm._clean_text(context)
         # print(context)
         pred_word = self.neural_lm.get_pred_word(model, context, top_k=5)
         # print(f"ACTUAL: {q.get_field(f'a)')}")
@@ -80,15 +80,15 @@ class SentenceCompletionChallenge():
 if __name__ == '__main__':
     scc = SentenceCompletionChallenge()
 
-    neural_params = {"model": "NEURAL",
+    neural_params = {"model": "NEURAL-RNN",
                      "num_files": None,
                      "model_path": "NEURAL_MODELS/LSTM/jolly-bush-44_epoch10.pth",
                      "model_data_path": "NEURAL_MODELS/LSTM/jolly-bush-44_data.csv"}
 
     stat_params = {"model": "STATISTICAL",
-                   "num_files": 200,
-                   "n": 2,
-                   "smoothing": ""}
+                   "num_files": 20,
+                   "n": 3,
+                   "smoothing": "absolute"}
 
     score = scc.predict_and_score(stat_params)
     print(score)

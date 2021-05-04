@@ -15,9 +15,10 @@ import csv
 import pandas as pd
 from nltk.corpus import wordnet as wn, wordnet_ic as wn_ic, lin_thesaurus as lin
 import re
+from pyprobar import probar
 
 
-class LSTMNeuralLanguageModel:
+class NeuralLanguageModel:
 
     def __init__(self, params):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -26,6 +27,9 @@ class LSTMNeuralLanguageModel:
         # Seeds
         # np.random.seed(101)
         # torch.manual_seed(101)
+
+        self.params = params
+        self.model_flag = self.params.get("model")
 
         self.EPOCHS = 50
         self.N_HIDDEN = 300
@@ -36,19 +40,19 @@ class LSTMNeuralLanguageModel:
         self.LEARNING_RATE = 0.01
 
         self.train_data_set = "Holmes_data_set"
-        self.training_files, self.testing_files = self.get_training_testing(self.train_data_set)
+        self.training_files, self.testing_files = self._get_training_testing(self.train_data_set)
 
-        num_files = params.get("num_files")
+        num_files = self.params.get("num_files")
         if num_files is None:
             print("TESTING MODEL: NO TRAIN FILES LOADED")
         else:
             self.train_files = self.training_files[:]
             self.VAL_SPLIT = 0.4
-            self.chars, self.encoded = self.preprocess_data()
+            self.chars, self.encoded = self._preprocess_data()
             val_idx = int(len(self.encoded) * (1 - self.VAL_SPLIT))
             self.train_data, self.val_data = self.encoded[:val_idx], self.encoded[val_idx:]
 
-    def get_training_testing(self, train_data_set, split=0.8):
+    def _get_training_testing(self, train_data_set, split=0.8):
         filenames = os.listdir(train_data_set)
         n = len(filenames)
         print("There are {} files in the training directory: {}".format(n, train_data_set))
@@ -56,23 +60,23 @@ class LSTMNeuralLanguageModel:
         index = int(n * split)
         return filenames[:index], filenames[index:]
 
-    def preprocess_data(self):
-        text = self.process_file(self.train_files)
-        text = self.clean_text(text)
+    def _preprocess_data(self):
+        text = self._process_file(self.train_files)
+        text = self._clean_text(text)
         chars = tuple(set(text))
         int2char = dict(enumerate(chars))
         char2int = {ch: ii for ii, ch in int2char.items()}
         return chars, np.array([char2int[ch] for ch in text])
 
-    def clean_text(self, text):
+    def _clean_text(self, text):
         # tokenizer = nltk.RegexpTokenizer(r"\w+")
         text = [word for word in nltk.word_tokenize(text) if word.isalnum()]
         return ' '.join(text)
 
-    def process_file(self, files):
+    def _process_file(self, files):
         corpus = []
-        for file in files:
-            print("Processing {}".format(file))
+        print(f"PROCESSING {self.params.get('num_files')} FILES")
+        for file in probar(files):
             try:
                 with open(os.path.join(self.train_data_set, file)) as in_stream:
                     for line in in_stream:
@@ -83,7 +87,7 @@ class LSTMNeuralLanguageModel:
                 print("UnicodeDecodeError processing {}: ignoring file".format(file))
         return ' '.join(corpus)
 
-    def one_hot_encode(self, arr, n_labels):
+    def _one_hot_encode(self, arr, n_labels):
         # Initialize the the encoded array
         one_hot = np.zeros((np.multiply(*arr.shape), n_labels), dtype=np.float32)
         # Fill the appropriate elements with ones
@@ -94,7 +98,7 @@ class LSTMNeuralLanguageModel:
     # get_batched returns batches of size (batch_size*seq_length).
     # Takes as input an array to make batches from, a batch size (the number of sequences
     # per batch) and seq_length which defines the number of encoded chars in a sequence
-    def get_batches(self, arr, batch_size, seq_length):
+    def _get_batches(self, arr, batch_size, seq_length):
         batch_size_total = batch_size * seq_length
         # total number of batches we can make, // integer division, round down
         n_batches = len(arr) // batch_size_total
@@ -115,14 +119,20 @@ class LSTMNeuralLanguageModel:
             yield x, y
 
     def train_model(self, save_model=False):
-        model = LSTMModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
+        if self.model_flag == "NEURAL-RNN":
+            model = RNNModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
+        elif self.model_flag == "NEURAL-LSTM":
+            model = LSTMModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
+        else:
+            print("MODEL TYPE NOT UNDERSTOOD")
+            return None
         model.to(self.device)
         print(f"MODEL ARCHITECTURE:\n{model}")
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=self.LEARNING_RATE)
 
-        save_path = f"NEURAL_MODELS/LSTM"
+        save_path = f"NEURAL_MODELS/{self.model_flag}"
         if save_model:
             wandb.init(project="anle-cw")
             wandb.watch(model)
@@ -137,8 +147,8 @@ class LSTMNeuralLanguageModel:
 
             model.train()
             train_hidden = model.init_hidden(self.BATCH_SIZE)
-            for X_train, y_train in self.get_batches(self.train_data, self.BATCH_SIZE, self.SEQ_LENGTH):
-                X_train = self.one_hot_encode(X_train, n_chars)
+            for X_train, y_train in self._get_batches(self.train_data, self.BATCH_SIZE, self.SEQ_LENGTH):
+                X_train = self._one_hot_encode(X_train, n_chars)
                 X_train, y_train = torch.from_numpy(X_train).to(self.device), torch.from_numpy(y_train).to(self.device)
 
                 # Creating new variables for the hidden state, otherwise
@@ -166,8 +176,8 @@ class LSTMNeuralLanguageModel:
 
             model.eval()
             val_hidden = model.init_hidden(self.BATCH_SIZE)
-            for X_val, y_val in self.get_batches(self.val_data, self.BATCH_SIZE, self.SEQ_LENGTH):
-                X_val = self.one_hot_encode(X_val, n_chars)
+            for X_val, y_val in self._get_batches(self.val_data, self.BATCH_SIZE, self.SEQ_LENGTH):
+                X_val = self._one_hot_encode(X_val, n_chars)
                 X_val, y_val = torch.from_numpy(X_val).to(self.device), torch.from_numpy(y_val).to(self.device)
 
                 val_hidden = tuple([each.data for each in val_hidden])
@@ -198,7 +208,10 @@ class LSTMNeuralLanguageModel:
     def load_model(self, model_path, model_data_path):
         model_data = pd.read_csv(model_data_path)
         tokens = re.findall(r"'(.*?)'", model_data["TOKENS"][0])
-        model = LSTMModel(tokens, int(model_data["N_HIDDEN"][0]), int(model_data["N_LAYERS"][0]))
+        if self.model_flag == "NEURAL-RNN":
+            model = RNNModel(tokens, int(model_data["N_HIDDEN"][0]), int(model_data["N_LAYERS"][0]))
+        else:
+            model = LSTMModel(tokens, int(model_data["N_HIDDEN"][0]), int(model_data["N_LAYERS"][0]))
         model.to(self.device)
 
         checkpoint = torch.load(model_path)
@@ -211,7 +224,7 @@ class LSTMNeuralLanguageModel:
     # returns the next character prediction and hidden state
     def get_pred_char(self, model, character, hidden=None, top_k=None):
         character = np.array([[model.char2int[character]]])
-        character = self.one_hot_encode(character, len(model.chars))
+        character = self._one_hot_encode(character, len(model.chars))
         character = torch.from_numpy(character).to(self.device)
 
         # detach hidden state from history
@@ -308,7 +321,50 @@ class LSTMModel(nn.Module):
         out = self.dropout(r_output)
 
         # Stack up LSTM outputs using view
-        # you may need to use contiguous to reshape the output
+        out = out.contiguous().view(-1, self.n_hidden)
+
+        out = self.fc(out)
+
+        # return the final output and the hidden state
+        return out, hidden
+
+    # Initiliases the hidden state with tensors of zeros (size: n_layers*batch_size*n_hidden)
+    def init_hidden(self, batch_size):
+        weight = next(self.parameters()).data
+        hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().to(self.device),
+                  weight.new(self.n_layers, batch_size, self.n_hidden).zero_().to(self.device))
+        return hidden
+
+
+class RNNModel(nn.Module):
+
+    def __init__(self, tokens, n_hidden=612, n_layers=4, drop_prob=0.5, lr=0.001):
+        nn.Module.__init__(self)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Hyper-parameters
+        self.drop_prob = drop_prob
+        self.n_layers = n_layers
+        self.n_hidden = n_hidden
+        self.lr = lr
+
+        # creating character dictionaries
+        self.chars = tokens
+        self.int2char = dict(enumerate(self.chars))
+        self.char2int = {ch: ii for ii, ch in self.int2char.items()}
+
+        # Layers
+        self.rnn = nn.RNN(len(self.chars), n_hidden, n_layers,
+                          dropout=drop_prob, batch_first=True)
+        self.dropout = nn.Dropout(drop_prob)
+        self.fc = nn.Linear(n_hidden, len(self.chars))
+
+    # Forward pass takes inputs (x) and the hidden state (hidden)
+    def forward(self, x, hidden):
+        r_output, hidden = self.rnn(x, hidden)
+        out = self.dropout(r_output)
+
+        # Stack up RNN outputs using view
         out = out.contiguous().view(-1, self.n_hidden)
 
         out = self.fc(out)
@@ -325,10 +381,10 @@ class LSTMModel(nn.Module):
 
 
 if __name__ == "__main__":
-    params = {"model": "NEURAL",
+    params = {"model": "NEURAL-RNN",
               "num_files": 10}
 
-    NLM = LSTMNeuralLanguageModel(params)
+    NLM = NeuralLanguageModel(params)
 
     NLM.train_model(save_model=True)
 
