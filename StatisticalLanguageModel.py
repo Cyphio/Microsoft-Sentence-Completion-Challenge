@@ -8,20 +8,27 @@ from collections import deque
 import csv
 import pandas as pd
 
+
 class StatisticalLanguageModel:
-    def __init__(self, num_training_files):
+    def __init__(self, params):
         np.random.seed(101)
 
         train_data_set = "Holmes_data_set"
         self.training_files, self.held_out_files = self.get_training_testing(train_data_set)
 
         self.train_data_set = train_data_set
-        self.files = self.training_files[:num_training_files]
+        self.files = self.training_files[:params.get("num_files")]
+
+        self.params = params
 
         self.uni_gram = {}
         self.bi_gram = {}
         self.tri_gram = {}
-        self.train()
+
+        self._process_files()
+        self._make_unknowns()
+        self._discount()
+        self._convert_to_probs()
 
     def get_training_testing(self, train_data_set, split=0.5):
         filenames = os.listdir(train_data_set)
@@ -30,15 +37,6 @@ class StatisticalLanguageModel:
         np.random.shuffle(filenames)
         index = int(n * split)
         return filenames[:index], filenames[index:]
-
-    def train(self):
-        self._process_files()
-
-        # smoothing:
-        self._make_unknowns()
-        self._discount()
-
-        self._convert_to_probs()
 
     def _process_line(self, line):
         tokens = ["__START"] + tokenize(line) + ["__END"]
@@ -82,15 +80,15 @@ class StatisticalLanguageModel:
         self.tri_gram = {key: {k: v / sum(adict.values()) for (k, v) in adict.items()} for (key, adict) in
                          self.tri_gram.items()}
 
-    def get_prob(self, token, context=None, methodparams=None):
+    def get_prob(self, token, context=None):
 
         # bi_gram
-        if methodparams.get("n") == 2:
+        if self.params.get("n") == 2:
             bi_gram = self.bi_gram.get(context[-1], self.bi_gram.get("__UNK", {}))
             big_p = bi_gram.get(token, bi_gram.get("__UNK", 0))
-            if methodparams.get("smoothing") == "absolute":
+            if self.params.get("smoothing") == "absolute":
                 uni_dist = self.uni_gram
-            elif methodparams.get("smoothing") == "kneser-ney":
+            elif self.params.get("smoothing") == "kneser-ney":
                 uni_dist = self.bigram_kn
             else:
                 # No smoothing
@@ -101,12 +99,12 @@ class StatisticalLanguageModel:
             return big_p + (bi_gram["__DISCOUNT"] * uni_dist.get(token, uni_dist.get("__UNK", 0)))
 
         # tri_gram
-        elif methodparams.get("n") == 3:
+        elif self.params.get("n") == 3:
             tri_gram = self.tri_gram.get(tuple(context[-2:]), self.tri_gram.get("__UNK", {}))
             big_p = tri_gram.get(token, tri_gram.get("__UNK", 0))
-            if methodparams.get("smoothing") == "absolute":
+            if self.params.get("smoothing") == "absolute":
                 uni_dist = self.uni_gram
-            elif methodparams.get("smoothing") == "kneser-ney":
+            elif self.params.get("smoothing") == "kneser-ney":
                 uni_dist = self.trigram_kn
             else:
                 # No smoothing
@@ -139,18 +137,16 @@ class StatisticalLanguageModel:
         filtered = [w for (w, p) in most_likely if w not in blacklist]
         return np.random.choice(filtered[:k])
 
-    def generate(self, k=1, end="__END", limit=20, methodparams=None):
-        if methodparams is None:
-            methodparams = {"n": 2}
+    def generate(self, k=1, end="__END", limit=20):
         # a very simplistic way of generating likely tokens according to the model
         current = "__START"
         tokens = []
         while current != end and len(tokens) < limit:
-            current = self.next_likely(n=methodparams.get("n"), k=k, current=current)
+            current = self.next_likely(n=self.params.get("n"), k=k, current=current)
             tokens.append(current)
         return " ".join(tokens[:-1])
 
-    def compute_prob_line(self, line, methodparams):
+    def compute_prob_line(self, line):
         # this will add _start to the beginning of a line of text
         # compute the probability of the line according to the desired model
         # and returns probability together with number of tokens
@@ -160,22 +156,22 @@ class StatisticalLanguageModel:
 
         for i, token in enumerate(tokens[1:]):
             acc += math.log(
-                self.get_prob(token, tokens[:i + 1], methodparams=methodparams))
+                self.get_prob(token, tokens[:i + 1]))
         return acc, len(tokens[1:])
 
-    def compute_probability(self, methodparams, filenames=None):
+    def compute_probability(self):
         if filenames is None:
             filenames = self.files
 
         total_p, total_N = 0, 0
-        for i, file in enumerate(filenames):
+        for i, file in enumerate(self.files):
             print("Processing file {}: {}".format(i, file))
             try:
                 with open(os.path.join(self.train_data_set, file)) as in_stream:
                     for line in in_stream:
                         line = line.rstrip()
                         if len(line) > 0:
-                            p, N = self.compute_prob_line(line=line, methodparams=methodparams)
+                            p, N = self.compute_prob_line(line=line)
                             total_p += p
                             total_N += N
             except UnicodeDecodeError:
@@ -185,8 +181,8 @@ class StatisticalLanguageModel:
     # compute the probability and length of the corpus
     # calculate perplexity
     # lower perplexity means that the model better explains the data
-    def compute_perplexity(self, methodparams, filenames=None):
-        p, N = self.compute_probability(filenames=filenames, methodparams=methodparams)
+    def compute_perplexity(self):
+        p, N = self.compute_probability()
         # print(p,N)
         pp = math.exp(-p / N)
         return pp
@@ -197,8 +193,6 @@ class StatisticalLanguageModel:
             if v < known:
                 del self.uni_gram[k]
                 self.uni_gram["__UNK"] = self.uni_gram.get("__UNK", 0) + v
-
-
 
         for (k, adict) in list(self.bi_gram.items()):
             for (kk, v) in list(adict.items()):
@@ -214,8 +208,6 @@ class StatisticalLanguageModel:
                 self.bi_gram["__UNK"] = current
             else:
                 self.bi_gram[k] = adict
-
-
 
         for (k, adict) in list(self.tri_gram.items()):
             for (kk, v) in list(adict.items()):
@@ -259,7 +251,6 @@ class StatisticalLanguageModel:
             #     else:
             #         self.tri_gram[k] = adict
 
-
     def _discount(self, discount=0.75):
         # discount each bigram count by a small fixed amount
         self.bi_gram = {k: {kk: value - discount for (kk, value) in adict.items()} for (k, adict) in
@@ -301,37 +292,13 @@ class StatisticalLanguageModel:
                 self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
         # print(self.trigram_kn)
 
+
 if __name__ == "__main__":
-    num_training_files = 1
-    lm = StatisticalLanguageModel(num_training_files)
+    params = {"model": "STATISTICAL",
+              "num_files": 1,
+              "n": 3,
+              "smoothing": "kneser-ney"}
+    lm = StatisticalLanguageModel(params)
 
-    # print(lm.generate(k=5, methodparams={"method": "tri_gram"}))
-
-    # lm._process_line("Then he hovered over the hills")
-    lm._process_line("hello hello hello hello hi how are you")
-    lm._process_line("hello mi nem jeff how are you")
-
-    print(f"UNIGRAM: {lm.uni_gram}\n")
-
-    print(f"ORIGINAL: {lm.tri_gram}\n")
-    lm._make_unknowns()
-    print(f"UNI WITH UNKS: {lm.uni_gram}\n")
-    print(f"TRI WITH UNKS: {lm.tri_gram}\n")
-
-    lm._discount()
-    print(f"WITH DISCOUNT: {lm.tri_gram}\n")
-    lm._convert_to_probs()
-    print(f"CONVERT TO PROBS: {lm.tri_gram}\n")
-
-    # print(lm.uni_gram)
-    # print(lm.bi_gram)
-
-    # print(lm.get_prob("pleased", context=["are"], methodparams={"method": "trigram"}))
-    # print(lm.compute_perplexity(method='uni_gram', smoothing=""))
-
-    # print(lm.tri_gram.get(tuple(context[-2:]), lm.tri_gram.get("__UNK", {})))
-
-    context = tokenize("Then he hovered over")
-
-    print(lm.get_prob(token="the", context=context,
-                      methodparams={"n": 2, "smoothing": "absolute"}))
+    prob = lm.get_prob(token="this", context="had done")
+    print(prob)

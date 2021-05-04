@@ -17,19 +17,20 @@ class SentenceCompletionChallenge():
     def get_field(self, field):
         return [q.get_field(field) for q in self.questions]
 
-    def predict(self, methodparams=None):
-        if methodparams is None:
-            methodparams = {"model": "STATISTICAL", "n": 1, "smoothing": ""}
+    def predict(self, params=None):
+        if params is None:
+            params = {"model": "STATISTICAL", "n": 1, "smoothing": ""}
 
-        if methodparams.get("model") == "STATISTICAL":
-            self.statistical_lm = StatisticalLanguageModel(methodparams)
-            return [self.statistical_pred(q=q, methodparams=methodparams) for q in self.questions]
+        if params.get("model") == "STATISTICAL":
+            self.statistical_lm = StatisticalLanguageModel(params)
+            print("GENERATING STATISTICAL LANGUAGE MODEL PREDICTIONS")
+            return [self.statistical_pred(q=q) for q in probar(self.questions)]
 
 
-        elif methodparams.get("model") == "NEURAL":
-            self.neural_lm = LSTMNeuralLanguageModel(methodparams)
-            model = self.neural_lm.load_model(model_path=methodparams.get("model_path"),
-                                              model_data_path=methodparams.get("model_data_path"))
+        elif params.get("model") == "NEURAL":
+            self.neural_lm = LSTMNeuralLanguageModel(params)
+            model = self.neural_lm.load_model(model_path=params.get("model_path"),
+                                              model_data_path=params.get("model_data_path"))
             print("GENERATING NEURAL LANGUAGE MODEL PREDICTIONS")
             return [self.neural_pred(q=q, model=model) for q in probar(self.questions)]
 
@@ -45,13 +46,11 @@ class SentenceCompletionChallenge():
     def choose_randomly(self):
         return np.random.choice(self.choices)
 
-    def statistical_pred(self, q, methodparams):
+    def statistical_pred(self, q):
         context = self.get_left_context(q)
-        probabilities = [self.statistical_lm.get_prob(q.get_field(f"{ch})"), context, methodparams=methodparams)
+        probabilities = [self.statistical_lm.get_prob(q.get_field(f"{ch})"), context)
                          for ch in self.choices]
         best_choices = [ch for ch, prob in zip(self.choices, probabilities) if prob == max(probabilities)]
-        # if len(best_choices)>1:
-        #    print("Randomly choosing from {}".format(len(best_choices)))
         return np.random.choice(best_choices)
 
     def neural_pred(self, q, model):
@@ -81,10 +80,15 @@ class SentenceCompletionChallenge():
 if __name__ == '__main__':
     scc = SentenceCompletionChallenge()
 
-    nueral_methodparams = {"model": "NEURAL",
-                           "num_files": 1,
-                           "model_path": "NEURAL_MODELS/LSTM/jolly-bush-44_epoch10.pth",
-                           "model_data_path": "NEURAL_MODELS/LSTM/jolly-bush-44_data.csv"}
+    neural_params = {"model": "NEURAL",
+                     "num_files": None,
+                     "model_path": "NEURAL_MODELS/LSTM/jolly-bush-44_epoch10.pth",
+                     "model_data_path": "NEURAL_MODELS/LSTM/jolly-bush-44_data.csv"}
 
-    score = scc.predict_and_score(nueral_methodparams)
+    stat_params = {"model": "STATISTICAL",
+                   "num_files": 200,
+                   "n": 2,
+                   "smoothing": ""}
+
+    score = scc.predict_and_score(stat_params)
     print(score)

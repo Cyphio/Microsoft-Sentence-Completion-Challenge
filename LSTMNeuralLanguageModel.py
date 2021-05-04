@@ -16,20 +16,16 @@ import pandas as pd
 from nltk.corpus import wordnet as wn, wordnet_ic as wn_ic, lin_thesaurus as lin
 import re
 
+
 class LSTMNeuralLanguageModel:
 
-    def __init__(self, methodparams):
+    def __init__(self, params):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"RUNNING ON: {self.device}")
 
         # Seeds
         # np.random.seed(101)
         # torch.manual_seed(101)
-
-        self.train_data_set = "Holmes_data_set"
-        self.training_files, self.testing_files = self.get_training_testing(self.train_data_set)
-
-        self.train_files = self.training_files[:methodparams.get("num_files")]
 
         self.EPOCHS = 50
         self.N_HIDDEN = 300
@@ -39,14 +35,18 @@ class LSTMNeuralLanguageModel:
         self.CLIP = 5
         self.LEARNING_RATE = 0.01
 
-        # Pre-processing hyper-parameters
-        self.VAL_SPLIT = 0.4
-        self.chars, self.encoded = self.preprocess_data()
-        val_idx = int(len(self.encoded) * (1 - self.VAL_SPLIT))
-        self.train_data, self.val_data = self.encoded[:val_idx], self.encoded[val_idx:]
+        self.train_data_set = "Holmes_data_set"
+        self.training_files, self.testing_files = self.get_training_testing(self.train_data_set)
 
-
-
+        num_files = params.get("num_files")
+        if num_files is None:
+            print("TESTING MODEL: NO TRAIN FILES LOADED")
+        else:
+            self.train_files = self.training_files[:]
+            self.VAL_SPLIT = 0.4
+            self.chars, self.encoded = self.preprocess_data()
+            val_idx = int(len(self.encoded) * (1 - self.VAL_SPLIT))
+            self.train_data, self.val_data = self.encoded[:val_idx], self.encoded[val_idx:]
 
     def get_training_testing(self, train_data_set, split=0.8):
         filenames = os.listdir(train_data_set)
@@ -149,7 +149,7 @@ class LSTMNeuralLanguageModel:
 
                 y_train_pred, train_hidden = model(X_train, train_hidden)
 
-                train_loss = loss_func(y_train_pred, y_train.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
+                train_loss = loss_func(y_train_pred, y_train.view(self.BATCH_SIZE * self.SEQ_LENGTH).long())
                 loss_stats['train'].append(train_loss.item())
 
                 train_loss.backward()
@@ -173,9 +173,10 @@ class LSTMNeuralLanguageModel:
                 val_hidden = tuple([each.data for each in val_hidden])
 
                 y_val_pred, val_hidden = model(X_val, val_hidden)
-                val_loss = loss_func(y_val_pred, y_val.view(self.BATCH_SIZE*self.SEQ_LENGTH).long())
+                val_loss = loss_func(y_val_pred, y_val.view(self.BATCH_SIZE * self.SEQ_LENGTH).long())
                 loss_stats['val'].append(val_loss.item())
-            print(f"Epoch {(epoch+1)+0:02}: | Train Loss: {loss_stats['train'][-1]:.5f} | Val Loss: {loss_stats['val'][-1]:.5f}")
+            print(
+                f"Epoch {(epoch + 1) + 0:02}: | Train Loss: {loss_stats['train'][-1]:.5f} | Val Loss: {loss_stats['val'][-1]:.5f}")
             if save_model:
                 wandb.log({'Train Loss': loss_stats['train'][-1], 'Val Loss': loss_stats['val'][-1]})
         print("Finished Training")
@@ -205,8 +206,6 @@ class LSTMNeuralLanguageModel:
 
         print("MODEL LOADED")
         return model
-
-
 
     # get_pred_chat takes a model and a character as argument
     # returns the next character prediction and hidden state
@@ -268,16 +267,17 @@ class LSTMNeuralLanguageModel:
             print("CALLED")
             similarities = [X_.wup_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
         elif measure == 'res':
-            similarities =[X_.res_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+            similarities = [X_.res_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
         elif measure == 'jcn':
-            similarities =[X_.jcn_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+            similarities = [X_.jcn_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
         elif measure == 'lin':
-            similarities =[X_.lin_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
+            similarities = [X_.lin_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
         else:
             # Else, calculate path similarity
             similarities = [X_.path_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
         similarities = [i for i in similarities if i]
         return max(similarities)
+
 
 class LSTMModel(nn.Module):
 
@@ -325,18 +325,14 @@ class LSTMModel(nn.Module):
 
 
 if __name__ == "__main__":
-    methodparams = {"model": "NEURAL",
-                    "num_files": 10}
+    params = {"model": "NEURAL",
+              "num_files": 10}
 
-    NLM = LSTMNeuralLanguageModel(methodparams)
-
+    NLM = LSTMNeuralLanguageModel(params)
 
     NLM.train_model(save_model=True)
-
 
     # model = NLM.load_model(model_path="NEURAL_MODELS/LSTM/jolly-bush-44_epoch50.pth",
     #                        model_data_path="NEURAL_MODELS/LSTM/jolly-bush-44_data.csv")
     # pred_word, sentence = NLM.get_pred_word(model, prime='I have it from the same source that you are both an orphan and a bachelor and are ', top_k=5)
     # print(NLM.get_prob("the", "discipline", measure='path'))
-
-
