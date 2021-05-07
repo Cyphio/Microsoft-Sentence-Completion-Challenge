@@ -1,0 +1,11 @@
+2021-05-04 11:55:25,915 INFO    MainThread:19720 [internal.py:wandb_internal():88] W&B internal server running at pid: 19720, started at: 2021-05-04 11:55:25.907055
+2021-05-04 11:55:25,917 INFO    WriterThread:19720 [datastore.py:open_for_write():77] open: C:\Users\harry\PycharmProjects\ANLE_Assignment\wandb\run-20210504_115524-223jvoaa\run-223jvoaa.wandb
+2021-05-04 11:55:25,918 DEBUG   HandlerThread:19720 [handler.py:handle_request():120] handle_request: check_version
+2021-05-04 11:55:25,919 DEBUG   SenderThread:19720 [sender.py:send():160] send: header
+2021-05-04 11:55:25,919 DEBUG   SenderThread:19720 [sender.py:send():160] send: request
+2021-05-04 11:55:25,919 DEBUG   SenderThread:19720 [sender.py:send_request():169] send_request: check_version
+2021-05-04 11:55:26,082 DEBUG   SenderThread:19720 [sender.py:send():160] send: run
+2021-05-04 11:55:26,462 INFO    SenderThread:19720 [sender.py:_start_run_threads():651] run started: 223jvoaa with start time 1620125724
+2021-05-04 11:55:26,462 DEBUG   SenderThread:19720 [sender.py:send():160] send: summary
+2021-05-04 11:55:26,463 INFO    SenderThread:19720 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-04 11:55:26,464 DEBUG   HandlerThread:19720 [handler.py:handle_request():120] handle_request: run_start

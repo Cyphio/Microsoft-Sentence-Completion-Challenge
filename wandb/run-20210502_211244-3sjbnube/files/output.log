@@ -1,0 +1,13 @@
+Beginning training
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:795: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
+Traceback (most recent call last):
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 246, in <module>
+    NLM.train_model(save_model=True)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 154, in train_model
+    train_loss.backward()
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\tensor.py", line 245, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\autograd\__init__.py", line 145, in backward
+    Variable._execution_engine.run_backward(
+RuntimeError: CUDA out of memory. Tried to allocate 1.04 GiB (GPU 0; 8.00 GiB total capacity; 4.71 GiB already allocated; 937.83 MiB free; 5.10 GiB reserved in total by PyTorch)

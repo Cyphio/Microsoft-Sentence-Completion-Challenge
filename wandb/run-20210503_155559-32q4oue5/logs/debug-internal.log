@@ -1,0 +1,39 @@
+2021-05-03 15:56:01,183 INFO    MainThread:16528 [internal.py:wandb_internal():88] W&B internal server running at pid: 16528, started at: 2021-05-03 15:56:01.176273
+2021-05-03 15:56:01,185 INFO    WriterThread:16528 [datastore.py:open_for_write():77] open: C:\Users\harry\PycharmProjects\ANLE_Assignment\wandb\run-20210503_155559-32q4oue5\run-32q4oue5.wandb
+2021-05-03 15:56:01,186 DEBUG   HandlerThread:16528 [handler.py:handle_request():120] handle_request: check_version
+2021-05-03 15:56:01,187 DEBUG   SenderThread:16528 [sender.py:send():160] send: header
+2021-05-03 15:56:01,187 DEBUG   SenderThread:16528 [sender.py:send():160] send: request
+2021-05-03 15:56:01,188 DEBUG   SenderThread:16528 [sender.py:send_request():169] send_request: check_version
+2021-05-03 15:56:01,309 DEBUG   SenderThread:16528 [sender.py:send():160] send: run
+2021-05-03 15:56:01,637 INFO    SenderThread:16528 [sender.py:_start_run_threads():651] run started: 32q4oue5 with start time 1620053760
+2021-05-03 15:56:01,637 DEBUG   SenderThread:16528 [sender.py:send():160] send: summary
+2021-05-03 15:56:01,638 DEBUG   HandlerThread:16528 [handler.py:handle_request():120] handle_request: run_start
+2021-05-03 15:56:01,639 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:56:04,182 DEBUG   HandlerThread:16528 [meta.py:__init__():34] meta init
+2021-05-03 15:56:04,183 DEBUG   HandlerThread:16528 [meta.py:__init__():48] meta init done
+2021-05-03 15:56:04,183 DEBUG   HandlerThread:16528 [meta.py:probe():190] probe
+2021-05-03 15:56:04,190 DEBUG   HandlerThread:16528 [meta.py:_setup_git():180] setup git
+2021-05-03 15:56:04,270 DEBUG   HandlerThread:16528 [meta.py:_setup_git():187] setup git done
+2021-05-03 15:56:04,270 DEBUG   HandlerThread:16528 [meta.py:_save_pip():52] save pip
+2021-05-03 15:56:04,271 DEBUG   HandlerThread:16528 [meta.py:_save_pip():66] save pip done
+2021-05-03 15:56:04,272 DEBUG   HandlerThread:16528 [meta.py:probe():231] probe done
+2021-05-03 15:56:04,504 DEBUG   SenderThread:16528 [sender.py:send():160] send: files
+2021-05-03 15:56:04,505 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file wandb-metadata.json with policy now
+2021-05-03 15:56:04,505 DEBUG   HandlerThread:16528 [handler.py:handle_request():120] handle_request: status
+2021-05-03 15:56:04,506 DEBUG   SenderThread:16528 [sender.py:send():160] send: request
+2021-05-03 15:56:04,506 DEBUG   SenderThread:16528 [sender.py:send_request():169] send_request: status
+2021-05-03 15:56:04,907 DEBUG   SenderThread:16528 [sender.py:send():160] send: files
+2021-05-03 15:56:04,907 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file media\graph\graph_0_summary_05640c79.graph.json with policy now
+2021-05-03 15:56:04,909 DEBUG   SenderThread:16528 [sender.py:send():160] send: summary
+2021-05-03 15:56:04,909 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:56:04,910 DEBUG   SenderThread:16528 [sender.py:send():160] send: summary
+2021-05-03 15:56:04,910 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:56:05,032 DEBUG   SenderThread:16528 [sender.py:send():160] send: summary
+2021-05-03 15:56:05,033 INFO    SenderThread:16528 [sender.py:_save_file():781] saving file wandb-summary.json with policy end
+2021-05-03 15:56:19,703 DEBUG   HandlerThread:16528 [handler.py:handle_request():120] handle_request: status
+2021-05-03 15:56:19,704 DEBUG   SenderThread:16528 [sender.py:send():160] send: request
+2021-05-03 15:56:19,704 DEBUG   SenderThread:16528 [sender.py:send_request():169] send_request: status
+2021-05-03 15:56:33,107 DEBUG   SenderThread:16528 [sender.py:send():160] send: stats
+2021-05-03 15:56:34,920 DEBUG   HandlerThread:16528 [handler.py:handle_request():120] handle_request: status
+2021-05-03 15:56:34,921 DEBUG   SenderThread:16528 [sender.py:send():160] send: request
+2021-05-03 15:56:34,921 DEBUG   SenderThread:16528 [sender.py:send_request():169] send_request: status

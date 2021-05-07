@@ -1,0 +1,56 @@
+Beginning training
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:760: UserWarning: Using non-full backward hooks on a Module that does not return a single Tensor or a tuple of Tensors is deprecated and will be removed in future versions. This hook will be missing some of the grad_output. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using non-full backward hooks on a Module that does not return a "
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:795: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
+Epoch 01: | Train Loss: 2.59134 | Val Loss: 2.50021
+Epoch 02: | Train Loss: 2.30347 | Val Loss: 2.19938
+Epoch 03: | Train Loss: 2.19952 | Val Loss: 2.10549
+Epoch 04: | Train Loss: 2.14666 | Val Loss: 2.05650
+Epoch 05: | Train Loss: 2.10906 | Val Loss: 2.01797
+Epoch 06: | Train Loss: 2.08912 | Val Loss: 1.98801
+Epoch 07: | Train Loss: 2.05448 | Val Loss: 1.96593
+Epoch 08: | Train Loss: 2.03649 | Val Loss: 1.94328
+Epoch 09: | Train Loss: 2.03120 | Val Loss: 1.92472
+Epoch 10: | Train Loss: 2.00575 | Val Loss: 1.91327
+Epoch 11: | Train Loss: 2.01850 | Val Loss: 1.90511
+Epoch 12: | Train Loss: 2.00336 | Val Loss: 1.89810
+Epoch 13: | Train Loss: 1.99161 | Val Loss: 1.89025
+Epoch 14: | Train Loss: 1.97936 | Val Loss: 1.88180
+Epoch 15: | Train Loss: 1.96982 | Val Loss: 1.88119
+Epoch 16: | Train Loss: 1.96125 | Val Loss: 1.87393
+Epoch 17: | Train Loss: 1.97445 | Val Loss: 1.87390
+Epoch 18: | Train Loss: 1.96118 | Val Loss: 1.86991
+Epoch 19: | Train Loss: 1.96264 | Val Loss: 1.86272
+Epoch 20: | Train Loss: 1.95507 | Val Loss: 1.86087
+Epoch 21: | Train Loss: 1.96373 | Val Loss: 1.85872
+Epoch 22: | Train Loss: 1.95446 | Val Loss: 1.85688
+Epoch 23: | Train Loss: 1.95271 | Val Loss: 1.85565
+Epoch 24: | Train Loss: 1.94972 | Val Loss: 1.85128
+Epoch 25: | Train Loss: 1.93869 | Val Loss: 1.84725
+Epoch 26: | Train Loss: 1.93713 | Val Loss: 1.84275
+Epoch 27: | Train Loss: 1.93808 | Val Loss: 1.84168
+Epoch 28: | Train Loss: 1.92929 | Val Loss: 1.83965
+Epoch 29: | Train Loss: 1.93444 | Val Loss: 1.83972
+Epoch 30: | Train Loss: 1.93220 | Val Loss: 1.84258
+Epoch 31: | Train Loss: 1.93675 | Val Loss: 1.84017
+Epoch 32: | Train Loss: 1.93670 | Val Loss: 1.83548
+Epoch 33: | Train Loss: 1.92505 | Val Loss: 1.83513
+Epoch 34: | Train Loss: 1.91784 | Val Loss: 1.83503
+Epoch 35: | Train Loss: 1.91572 | Val Loss: 1.83160
+Epoch 36: | Train Loss: 1.91455 | Val Loss: 1.83509
+Epoch 37: | Train Loss: 1.91177 | Val Loss: 1.83369
+Epoch 38: | Train Loss: 1.90973 | Val Loss: 1.83312
+Epoch 39: | Train Loss: 1.91869 | Val Loss: 1.83371
+Epoch 40: | Train Loss: 1.90696 | Val Loss: 1.82960
+Epoch 41: | Train Loss: 1.91258 | Val Loss: 1.83011
+Epoch 42: | Train Loss: 1.91233 | Val Loss: 1.83099
+Epoch 43: | Train Loss: 1.91366 | Val Loss: 1.82788
+Epoch 44: | Train Loss: 1.90503 | Val Loss: 1.83078
+Epoch 45: | Train Loss: 1.91044 | Val Loss: 1.82755
+Epoch 46: | Train Loss: 1.90294 | Val Loss: 1.82768
+Epoch 47: | Train Loss: 1.91038 | Val Loss: 1.82878
+Epoch 48: | Train Loss: 1.91087 | Val Loss: 1.81961
+Epoch 49: | Train Loss: 1.91320 | Val Loss: 1.82033
+Epoch 50: | Train Loss: 1.90307 | Val Loss: 1.82097
+Finished Training

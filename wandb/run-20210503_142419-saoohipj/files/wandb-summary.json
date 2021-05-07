@@ -1,0 +1,1 @@
+{"graph_0": {"_type": "graph-file", "path": "media/graph/graph_0_summary_0f7f1014.graph.json", "sha256": "0f7f101468a2cbd820f705c5916a6b8e0d14edb7ddea8b1211652b12c0f24429", "size": 1202}, "Train Loss": 2.4817583560943604, "Val Loss": 2.4881627559661865, "_runtime": 78, "_timestamp": 1620048337, "_step": 9}

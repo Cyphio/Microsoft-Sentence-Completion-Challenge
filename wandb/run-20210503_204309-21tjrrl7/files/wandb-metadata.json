@@ -1,0 +1,24 @@
+{
+    "os": "Windows-10-10.0.18362-SP0",
+    "python": "3.8.8",
+    "heartbeatAt": "2021-05-03T19:43:14.687703",
+    "startedAt": "2021-05-03T19:43:09.728938",
+    "docker": null,
+    "gpu": "GeForce GTX 1070 Ti",
+    "gpu_count": 1,
+    "cpu_count": 16,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:/Users/harry/PycharmProjects/ANLE_Assignment/LSTMNeuralLanguageModel.py",
+    "codePath": "LSTMNeuralLanguageModel.py",
+    "git": {
+        "remote": "https://github.com/Cyphio/ANLE_Assignment.git",
+        "commit": "114edc7f223038d29aa8d042d9bced7aa7500a9f"
+    },
+    "email": "Harry@mbr-online.co.uk",
+    "root": "C:/Users/harry/PycharmProjects/ANLE_Assignment",
+    "host": "Harry-Desktop",
+    "username": "harry",
+    "executable": "C:\\Users\\harry\\Anaconda3\\envs\\ML38\\python.exe"
+}

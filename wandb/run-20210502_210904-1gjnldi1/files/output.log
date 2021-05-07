@@ -1,0 +1,13 @@
+Beginning training
+Traceback (most recent call last):
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 246, in <module>
+    NLM.train_model(save_model=True)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 149, in train_model
+    y_train_pred, hidden = model(X_train)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 222, in forward
+    hidden = self.init_hidden(batch_size)
+  File "C:/Users/harry/PycharmProjects/ANLE_Assignment/NeuralLanguageModel.py", line 236, in init_hidden
+    hidden = torch.zeros(self.n_layers, batch_size, self.hidden_dim).to(self.device)
+RuntimeError: CUDA out of memory. Tried to allocate 3.75 GiB (GPU 0; 8.00 GiB total capacity; 479.81 MiB already allocated; 5.67 GiB free; 502.00 MiB reserved in total by PyTorch)
