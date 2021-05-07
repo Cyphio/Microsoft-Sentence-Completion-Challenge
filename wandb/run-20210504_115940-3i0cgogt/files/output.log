@@ -1,0 +1,19 @@
+Beginning training
+Traceback (most recent call last):
+  File "C:\Users\harry\PycharmProjects\ANLE_Assignment\NeuralLanguageModel.py", line 390, in <module>
+    NLM.train_model(save_model=True)
+  File "C:\Users\harry\PycharmProjects\ANLE_Assignment\NeuralLanguageModel.py", line 161, in train_model
+    y_train_pred, train_hidden = model(X_train, train_hidden)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\harry\PycharmProjects\ANLE_Assignment\NeuralLanguageModel.py", line 365, in forward
+    r_output, hidden = self.rnn(x, hidden)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\rnn.py", line 262, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\rnn.py", line 229, in check_forward_args
+    self.check_hidden_size(hidden, expected_hidden_size)
+  File "C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\rnn.py", line 222, in check_hidden_size
+    if hx.size() != expected_hidden_size:
+AttributeError: 'tuple' object has no attribute 'size'

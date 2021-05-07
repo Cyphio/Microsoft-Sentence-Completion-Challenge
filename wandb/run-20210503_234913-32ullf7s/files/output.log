@@ -1,0 +1,13 @@
+Beginning training
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:760: UserWarning: Using non-full backward hooks on a Module that does not return a single Tensor or a tuple of Tensors is deprecated and will be removed in future versions. This hook will be missing some of the grad_output. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using non-full backward hooks on a Module that does not return a "
+C:\Users\harry\Anaconda3\envs\ML38\lib\site-packages\torch\nn\modules\module.py:795: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
+Epoch 01: | Train Loss: 2.97644 | Val Loss: 7.23238
+Epoch 02: | Train Loss: 2.98192 | Val Loss: 4.18150
+Epoch 03: | Train Loss: 2.97918 | Val Loss: 2.97686
+Epoch 04: | Train Loss: 2.97766 | Val Loss: 2.97135
+Epoch 05: | Train Loss: 2.97554 | Val Loss: 2.97203
+Epoch 06: | Train Loss: 2.97397 | Val Loss: 2.97188
+Epoch 07: | Train Loss: 2.97365 | Val Loss: 2.97135
+Epoch 08: | Train Loss: 2.97360 | Val Loss: 2.96955

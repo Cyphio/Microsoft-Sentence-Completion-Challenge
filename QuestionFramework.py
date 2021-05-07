@@ -16,10 +16,6 @@ class Questions:
 
         self.questions = [Question(qline) for qline in qlines[1:]]
 
-        # self.df = pd.DataFrame(qlines[1:], columns=qlines[0])
-        # self.df['tokens'] = self.df['question'].map(tokenize)
-        # self.df['left_context'] = self.df['tokens'].map(lambda x: self.get_left_context(x, self.left_context_window))
-
         with open(answer_path) as instream:
             csvreader = csv.reader(instream)
             alines = list(csvreader)

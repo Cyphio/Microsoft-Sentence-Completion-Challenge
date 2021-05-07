@@ -9,9 +9,10 @@ import csv
 import pandas as pd
 from pyprobar import probar
 
+
 class StatisticalLanguageModel:
     def __init__(self, params):
-        np.random.seed(101)
+        # np.random.seed(101)
 
         train_data_set = "Holmes_data_set"
         self.training_files, self.held_out_files = self.get_training_testing(train_data_set)
@@ -27,7 +28,8 @@ class StatisticalLanguageModel:
 
         self._process_files()
         self._make_unknowns()
-        self._discount()
+        if self.params.get("smoothing") is not None:
+            self._discount()
         self._convert_to_probs()
 
     def get_training_testing(self, train_data_set, split=0.5):
@@ -111,32 +113,6 @@ class StatisticalLanguageModel:
             else:
                 self.tri_gram[k] = adict
 
-            # known = [self.uni_gram.get(token, 0) for token in k]
-            # for idx, token in enumerate(k):
-            #     if known[idx] == 0:
-            #         lst = list(k)
-            #         lst[idx] = "__UNK"
-            #         k = tuple(lst)
-            #         current = self.tri_gram.get("__UNK", {})
-            #         current.update(adict)
-            #         self.tri_gram["__UNK"] = current
-            #     else:
-            #         self.tri_gram[k] = adict
-
-            # print(k)
-            # for idx, token in enumerate(k):
-            #     isknown = self.uni_gram.get(token, 0)
-            #     if isknown == 0:
-            #         del self.tri_gram[k]
-            #         current = self.tri_gram.get("__UNK", {})
-            #         current.update(adict)
-            #         self.tri_gram["__UNK"] = current
-            #         x = list(k)
-            #         x[idx] = "__UNK"
-            #         k = tuple(x)
-            #     else:
-            #         self.tri_gram[k] = adict
-
     def _discount(self, discount=0.75):
         # discount each bigram count by a small fixed amount
         self.bi_gram = {k: {kk: value - discount for (kk, value) in adict.items()} for (k, adict) in
@@ -149,11 +125,9 @@ class StatisticalLanguageModel:
         for k in self.bi_gram.keys():
             lamb = len(self.bi_gram[k])
             self.bi_gram[k]["__DISCOUNT"] = lamb * discount
-            # print(self.bi_gram[k])
         for k in self.tri_gram.keys():
             lamb = len(self.tri_gram[k])
             self.tri_gram[k]["__DISCOUNT"] = lamb * discount
-            # print(self.tri_gram[k])
 
         # work out kneser-ney unigram probabilities
         # count the number of contexts each word has been seen in
@@ -161,22 +135,11 @@ class StatisticalLanguageModel:
         for (bigram_k, bigram_dict) in self.bi_gram.items():
             for bigram_kk in bigram_dict.keys():
                 self.bigram_kn[bigram_kk] = self.bigram_kn.get(bigram_kk, 0) + 1
-        # print(self.bigram_kn)
-
-        # self.trigram_kn = {}
-        # for (trigram_k, tigram_dict) in self.tri_gram.items():
-        #     for trigram_kk, bigram_dict in zip(tigram_dict.keys(), self.bi_gram.values()):
-        #         # for bigram_dict in self.bi_gram.values():
-        #             if trigram_kk in bigram_dict.keys():
-        #                 self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
-        # print(self.bi_gram)
-        # print(self.trigram_kn)
 
         self.trigram_kn = {}
         for (trigram_k, trigram_dict) in self.tri_gram.items():
             for trigram_kk in trigram_dict.keys():
                 self.trigram_kn[trigram_kk] = self.trigram_kn.get(trigram_kk, 0) + 1
-        # print(self.trigram_kn)
 
     def _convert_to_probs(self):
         self.uni_gram = {k: v / sum(self.uni_gram.values()) for (k, v) in self.uni_gram.items()}
@@ -217,7 +180,6 @@ class StatisticalLanguageModel:
 
         # uni_gram
         else:
-            print("PREDICTING USING UNI_GRAM")
             return self.uni_gram.get(token, self.uni_gram.get("__UNK", 0))
 
     def gen_highly_probable_words(self, k, n):
@@ -226,12 +188,12 @@ class StatisticalLanguageModel:
 
     # use probabilities according to method to generate a likely next sequence
     # choose random token from k best
-    def next_likely(self, n, k=1, current=""):
+    def next_likely(self, k=1, current=""):
         blacklist = ["__START", "__UNK", "__DISCOUNT"]
 
-        if n == 3:
+        if self.params.get("n") == 3:
             distribution = self.tri_gram.get(current, self.tri_gram.get("__UNK", {}))
-        elif n == 2:
+        elif self.params.get("n") == 2:
             distribution = self.bi_gram.get(current, self.bi_gram.get("__UNK", {}))
         else:
             distribution = self.uni_gram
@@ -241,14 +203,27 @@ class StatisticalLanguageModel:
         filtered = [w for (w, p) in most_likely if w not in blacklist]
         return np.random.choice(filtered[:k])
 
-    def generate(self, k=1, end="__END", limit=20):
-        # a very simplistic way of generating likely tokens according to the model
-        current = "__START"
+    # Generate a sting of sequentially likely tokens. Pick the top k most likely tokens and randomly choose from them.
+    # return no more than limit tokens
+    def generate(self, k=1, limit=20):
         tokens = []
-        while current != end and len(tokens) < limit:
-            current = self.next_likely(n=self.params.get("n"), k=k, current=current)
-            tokens.append(current)
-        return " ".join(tokens[:-1])
+        if self.params.get("n") < 3:
+            current = "__START"
+        else:
+            current = ("__END",  "__START")
+        while len(tokens) < limit:
+            if self.params.get("n") < 3:
+                current = self.next_likely(k=k, current=current)
+                if current == "__END":
+                    break
+                tokens.append(current)
+            else:
+                current_ = self.next_likely(k=k, current=current)
+                if current_ == "__END":
+                    break
+                tokens.append(current_)
+                current = (current[-1], current_)
+        return " ".join(tokens)
 
     def compute_prob_line(self, line):
         # this will add _start to the beginning of a line of text
@@ -265,8 +240,8 @@ class StatisticalLanguageModel:
 
     def compute_probability(self):
         total_p, total_N = 0, 0
-        for i, file in enumerate(self.files):
-            print("Processing file {}: {}".format(i, file))
+        print("CALCULATING PERPLEXITY")
+        for i, file in enumerate(probar(self.files)):
             try:
                 with open(os.path.join(self.train_data_set, file)) as in_stream:
                     for line in in_stream:
@@ -291,10 +266,15 @@ class StatisticalLanguageModel:
 
 if __name__ == "__main__":
     params = {"model": "STATISTICAL",
-              "num_files": 1,
-              "n": 3,
+              "num_files": 50,
+              "n": 2,
               "smoothing": "kneser-ney"}
     lm = StatisticalLanguageModel(params)
 
-    prob = lm.get_prob(token="this", context="had done")
-    print(prob)
+    # prob = lm.get_prob(token="this", context="had done")
+    # perplexity = lm.compute_perplexity()
+    # print(f"PERPLEXITY: {perplexity}")
+
+    # print(lm.tri_gram[("__END", "__START")])
+
+    print(lm.generate())

@@ -19,20 +19,19 @@ from pyprobar import probar
 
 
 class NeuralLanguageModel:
-
     def __init__(self, params):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"RUNNING ON: {self.device}")
 
         # Seeds
-        # np.random.seed(101)
-        # torch.manual_seed(101)
+        np.random.seed(101)
+        torch.manual_seed(101)
 
         self.params = params
         self.model_flag = self.params.get("model")
 
         self.EPOCHS = 50
-        self.N_HIDDEN = 300
+        self.N_HIDDEN = 50
         self.N_LAYERS = 3
         self.BATCH_SIZE = 64
         self.SEQ_LENGTH = 160
@@ -46,7 +45,7 @@ class NeuralLanguageModel:
         if num_files is None:
             print("TESTING MODEL: NO TRAIN FILES LOADED")
         else:
-            self.train_files = self.training_files[:]
+            self.train_files = self.training_files[:num_files]
             self.VAL_SPLIT = 0.4
             self.chars, self.encoded = self._preprocess_data()
             val_idx = int(len(self.encoded) * (1 - self.VAL_SPLIT))
@@ -62,14 +61,15 @@ class NeuralLanguageModel:
 
     def _preprocess_data(self):
         text = self._process_file(self.train_files)
+        print("CLEANING TEXT")
         text = self._clean_text(text)
+        print("DONE")
         chars = tuple(set(text))
         int2char = dict(enumerate(chars))
         char2int = {ch: ii for ii, ch in int2char.items()}
         return chars, np.array([char2int[ch] for ch in text])
 
     def _clean_text(self, text):
-        # tokenizer = nltk.RegexpTokenizer(r"\w+")
         text = [word for word in nltk.word_tokenize(text) if word.isalnum()]
         return ' '.join(text)
 
@@ -119,20 +119,14 @@ class NeuralLanguageModel:
             yield x, y
 
     def train_model(self, save_model=False):
-        if self.model_flag == "NEURAL-RNN":
-            model = RNNModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
-        elif self.model_flag == "NEURAL-LSTM":
-            model = LSTMModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
-        else:
-            print("MODEL TYPE NOT UNDERSTOOD")
-            return None
+        model = LSTMModel(tokens=self.chars, n_hidden=self.N_HIDDEN, n_layers=self.N_LAYERS)
         model.to(self.device)
         print(f"MODEL ARCHITECTURE:\n{model}")
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=self.LEARNING_RATE)
 
-        save_path = f"NEURAL_MODELS/{self.model_flag}"
+        save_path = f"NEURAL_MODELS/LSTM"
         if save_model:
             wandb.init(project="anle-cw")
             wandb.watch(model)
@@ -182,7 +176,11 @@ class NeuralLanguageModel:
 
                 val_hidden = tuple([each.data for each in val_hidden])
 
-                y_val_pred, val_hidden = model(X_val, val_hidden)
+                if self.model_flag == "NEURAL-RNN":
+                    y_val_pred, val_hidden = model(X_val)
+                else:
+                    y_val_pred, val_hidden = model(X_val, val_hidden)
+
                 val_loss = loss_func(y_val_pred, y_val.view(self.BATCH_SIZE * self.SEQ_LENGTH).long())
                 loss_stats['val'].append(val_loss.item())
             print(
@@ -191,7 +189,6 @@ class NeuralLanguageModel:
                 wandb.log({'Train Loss': loss_stats['train'][-1], 'Val Loss': loss_stats['val'][-1]})
         print("Finished Training")
         if save_model:
-            # torch.save(model, f"{save_path}/{wandb.run.name}.pth")
             torch.save({
                 'epoch': self.EPOCHS,
                 'model_state_dict': model.state_dict(),
@@ -236,7 +233,7 @@ class NeuralLanguageModel:
         if self.device == torch.device('cuda'):
             prob = prob.cpu()  # move to cpu
 
-        if top_k is None:
+        if top_k == 1 or top_k is None:
             top_ch = np.arange(len(model.chars))
         else:
             prob, top_ch = prob.topk(top_k)
@@ -268,16 +265,31 @@ class NeuralLanguageModel:
         # print(f"SENTENCE: {''.join(chars)}\nWORD: {tokenize(''.join(chars))[-1]}")
         return tokenize(''.join(chars))[-1], ''.join(chars)
 
+    def get_pred_char_sequence(self, model, prime='', size=20, top_k=None):
+        model.eval()
+        chars = [ch for ch in prime]
+        hidden = model.init_hidden(1)
+        prime_char = ""
+        for ch in prime:
+            prime_char, hidden = self.get_pred_char(model, ch, hidden, top_k=top_k)
+        chars.append(prime_char)
+
+        for i in range(size):
+            pred_char, hidden = self.get_pred_char(model, chars[-1], hidden, top_k=top_k)
+            chars.append(pred_char)
+        return ''.join(chars)
+
+    # get_prob takes as input a predicted word X, and a ground truth word y.
+    # it returns the maximum path similarity between the synsets of each word
+    # also has options to calculate similarity in different ways
     def get_prob(self, X, y, measure='path'):
         X_synsets = wn.synsets(str(X))
-        # print(X_synsets)
         if len(X_synsets) == 0:
             return 0
         y_synsets = wn.synsets(str(y))
         if measure == 'lch':
             similarities = [X_.lch_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
         elif measure == 'wup':
-            print("CALLED")
             similarities = [X_.wup_similarity(y_) for X_ in X_synsets for y_ in y_synsets]
         elif measure == 'res':
             similarities = [X_.res_similarity(y_, wn_ic.ic('ic-brown.dat')) for X_ in X_synsets for y_ in y_synsets]
@@ -336,59 +348,17 @@ class LSTMModel(nn.Module):
         return hidden
 
 
-class RNNModel(nn.Module):
-
-    def __init__(self, tokens, n_hidden=612, n_layers=4, drop_prob=0.5, lr=0.001):
-        nn.Module.__init__(self)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Hyper-parameters
-        self.drop_prob = drop_prob
-        self.n_layers = n_layers
-        self.n_hidden = n_hidden
-        self.lr = lr
-
-        # creating character dictionaries
-        self.chars = tokens
-        self.int2char = dict(enumerate(self.chars))
-        self.char2int = {ch: ii for ii, ch in self.int2char.items()}
-
-        # Layers
-        self.rnn = nn.RNN(len(self.chars), n_hidden, n_layers,
-                          dropout=drop_prob, batch_first=True)
-        self.dropout = nn.Dropout(drop_prob)
-        self.fc = nn.Linear(n_hidden, len(self.chars))
-
-    # Forward pass takes inputs (x) and the hidden state (hidden)
-    def forward(self, x, hidden):
-        r_output, hidden = self.rnn(x, hidden)
-        out = self.dropout(r_output)
-
-        # Stack up RNN outputs using view
-        out = out.contiguous().view(-1, self.n_hidden)
-
-        out = self.fc(out)
-
-        # return the final output and the hidden state
-        return out, hidden
-
-    # Initiliases the hidden state with tensors of zeros (size: n_layers*batch_size*n_hidden)
-    def init_hidden(self, batch_size):
-        weight = next(self.parameters()).data
-        hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().to(self.device),
-                  weight.new(self.n_layers, batch_size, self.n_hidden).zero_().to(self.device))
-        return hidden
-
-
 if __name__ == "__main__":
-    params = {"model": "NEURAL-RNN",
-              "num_files": 10}
+    params = {"model": "NEURAL",
+              "num_files": None}
 
     NLM = NeuralLanguageModel(params)
 
-    NLM.train_model(save_model=True)
+    # NLM.train_model(save_model=True)
 
-    # model = NLM.load_model(model_path="NEURAL_MODELS/LSTM/jolly-bush-44_epoch50.pth",
-    #                        model_data_path="NEURAL_MODELS/LSTM/jolly-bush-44_data.csv")
+    model = NLM.load_model(model_path="NEURAL_MODELS/LSTM/jolly-bush-44_epoch50.pth",
+                           model_data_path="NEURAL_MODELS/LSTM/jolly-bush-44_data.csv")
     # pred_word, sentence = NLM.get_pred_word(model, prime='I have it from the same source that you are both an orphan and a bachelor and are ', top_k=5)
     # print(NLM.get_prob("the", "discipline", measure='path'))
+    prime = "The man leaned over and pulled up the front of a kind of "
+    print(NLM.get_pred_word(model, prime=prime, top_k=1))
